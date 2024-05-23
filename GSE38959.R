@@ -13,7 +13,7 @@ library(Biobase)
 # load series and platform data from GEO
 # 
 # gset <- tryCatch({
-#   getGEO("GSE76250", GSEMatrix = TRUE, AnnotGPL = TRUE)
+#   getGEO("GSE38959", GSEMatrix = TRUE, AnnotGPL = TRUE)
 # }, error = function(e) e)
 
 
@@ -47,23 +47,16 @@ pheno_data <- pData(phenoData(gset))
 
 # Assuming 'feature_data' is your dataframe and 'gene_assignment' is the column with the data
 
-
-feature_data$Gene.Symbol <- sapply(strsplit(as.character(feature_data$gene_assignment), " // "), function(x) x[2])
-feature_data$Gene.ID <- sapply(strsplit(as.character(feature_data$gene_assignment), " // "), function(x) x[5])
-
-feature_data$Gene.ID1 <- sapply(strsplit(as.character(feature_data$gene_assignment), " // "), function(x) x[1])
-feature_data$Gene.Symbol1 <- sapply(strsplit(as.character(feature_data$gene_assignment), " // "), function(x) x[2])
-
-feature_data$Gene.ID <- sapply(strsplit(as.character(feature_data$Gene.ID), " /// "), function(x) x[1])
-
+feature_data <- feature_data %>% rename(Gene.Symbol = Gene.symbol)
 
 count_missing <- function(x) {
   sum(is.na(x) | x %in% c("--", "nan", "NA", "", " ", "---"))
 }
 
+
 # Apply this function to each of the specified columns
 
-missing_counts <- sapply(feature_data[c("Gene.ID", "Gene.Symbol", "Gene.ID1", "Gene.Symbol1")], count_missing)
+missing_counts <- sapply(feature_data[c("Gene.ID", "Gene.Symbol")], count_missing)
 
 print(missing_counts)
 
@@ -73,7 +66,7 @@ feature_data <- feature_data %>%
 
 
 # feature_data <- feature_data[, c("ID", "Gene.ID", "Gene.symbol", "Platform_SPOTID")]
-feature_data <- feature_data[, c("ID", "Gene.Symbol")]
+feature_data <- feature_data[, c("ID","Gene.ID","Gene.Symbol")]
 
 combined_data <- merge(ex_df, feature_data, by.x = "row.names", by.y = "ID")
 # Rename the 'Row.names' column to 'ID' in the resulting data frame for clarity
@@ -100,11 +93,13 @@ head(aggregated_data_with_ids)
 
 
 
-fs_data <- aggregated_data_with_ids[, c("ID", "Gene.Symbol")]
+fs_data <- aggregated_data_with_ids[, c("ID", "Gene.Symbol",)]
 row.names(aggregated_data_with_ids) <- aggregated_data_with_ids$Gene.Symbol
 
 aggregated_data_with_ids <- aggregated_data_with_ids %>%
   select(-ID, -Gene.Symbol)
+aggregated_data_with_ids <- aggregated_data_with_ids %>%
+  select(-Gene.ID)
 
 
 
@@ -221,7 +216,7 @@ plotDensities(ex, group=gs, main=title, legend ="topright")
 # UMAP plot (dimensionality reduction)
 ex <- na.omit(ex) # eliminate rows with NAs
 ex <- ex[!duplicated(ex), ]  # remove duplicates
-ump <- umap(t(ex), n_neighbors = 15, random_state = 123)
+ump <- umap(t(ex), n_neighbors = 5, random_state = 123)
 par(mar=c(3,3,2,6), xpd=TRUE)
 plot(ump$layout, main="UMAP plot, nbrs=15", xlab="", ylab="", col=gs, pch=20, cex=1.5)
 legend("topright", inset=c(-0.15,0), legend=levels(gs), pch=20,
@@ -241,10 +236,10 @@ pheno_data <- pData(phenoData(gset))
 complete <- merge(gene_data, pheno_data, by.x = "row.names", by.y = "row.names")
 
 data_to_plot <- complete %>%
-  select(TOP2A, group)  
+  select(CARMN, group)  
 
 # Create the plot
-ggplot(data_to_plot, aes(x = group, y = TOP2A, color = group)) +
+ggplot(data_to_plot, aes(x = group, y = CARMN, color = group)) +
   geom_boxplot() +
   labs(title = "Expression of TOP2A in TNBC and Normal Samples",
        x = "Sample Group",
