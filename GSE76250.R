@@ -4,10 +4,19 @@
 library(GEOquery)
 library(limma)
 library(umap)
+library(tidyr)
+library(dplyr)
+library(ggplot2)
+library(Biobase)
 
 # load series and platform data from GEO
+# 
+# gset <- tryCatch({
+#   getGEO("GSE76250", GSEMatrix = TRUE, AnnotGPL = TRUE)
+# }, error = function(e) e)
 
-gset <- getGEO("GSE76250", GSEMatrix =TRUE, AnnotGPL=FALSE)
+
+gset <- getGEO("GSE76250", GSEMatrix =TRUE, AnnotGPL=TRUE)
 if (length(gset) > 1) idx <- grep("GPL17586", attr(gset, "names")) else idx <- 1
 gset <- gset[[idx]]
 
@@ -19,6 +28,9 @@ gsms <- paste0("00000000000000000000000000000000000000000000000000",
                "00000000000000000000000000000000000000000000000000",
                "00000000000000000000000000000000000000000000000000",
                "000000000000000111111111111111111111111111111111")
+
+
+
 sml <- strsplit(gsms, split="")[[1]]
 
 # log2 transformation
@@ -29,13 +41,113 @@ LogC <- (qx[5] > 100) ||
 if (LogC) { ex[which(ex <= 0)] <- NaN
 exprs(gset) <- log2(ex) }
 
+ex <- exprs(gset)
+
+
+
+ex_df <- as.data.frame(ex)
+feature_data <- fData(gset)
+pheno_data <- pData(phenoData(gset))
+
+# Assuming 'feature_data' is your dataframe and 'gene_assignment' is the column with the data
+
+
+feature_data$Gene.Symbol <- sapply(strsplit(as.character(feature_data$gene_assignment), " // "), function(x) x[2])
+feature_data$Gene.ID <- sapply(strsplit(as.character(feature_data$gene_assignment), " // "), function(x) x[5])
+
+feature_data$Gene.ID1 <- sapply(strsplit(as.character(feature_data$gene_assignment), " // "), function(x) x[1])
+feature_data$Gene.Symbol1 <- sapply(strsplit(as.character(feature_data$gene_assignment), " // "), function(x) x[2])
+
+feature_data$Gene.ID <- sapply(strsplit(as.character(feature_data$Gene.ID), " /// "), function(x) x[1])
+
+
+count_missing <- function(x) {
+  sum(is.na(x) | x %in% c("--", "nan", "NA", "", " ", "---"))
+}
+
+# Apply this function to each of the specified columns
+
+missing_counts <- sapply(feature_data[c("Gene.ID", "Gene.Symbol", "Gene.ID1", "Gene.Symbol1")], count_missing)
+
+print(missing_counts)
+
+
+feature_data <- feature_data %>%
+  filter(!is.na(Gene.Symbol) & !Gene.Symbol %in% c("--", "nan", "NA", "", " ", "---"))
+
+
+# feature_data <- feature_data[, c("ID", "Gene.ID", "Gene.symbol", "Platform_SPOTID")]
+feature_data <- feature_data[, c("ID", "Gene.Symbol")]
+
+combined_data <- merge(ex_df, feature_data, by.x = "row.names", by.y = "ID")
+# Rename the 'Row.names' column to 'ID' in the resulting data frame for clarity
+names(combined_data)[1] <- "ID"
+
+
+
+
+aggregated_data <- combined_data %>%
+  group_by(Gene.Symbol) %>%
+  summarise(across(starts_with("GSM"), mean, na.rm = TRUE))
+
+
+aggregated_data <- as.data.frame(aggregated_data)
+
+
+feature_data <- feature_data[!duplicated(feature_data$Gene.Symbol), ]
+
+aggregated_data_with_ids <- aggregated_data %>%
+  left_join(feature_data, by = "Gene.Symbol")
+
+# Check the first few rows of the new dataframe to confirm the merge
+head(aggregated_data_with_ids)
+
+
+
+fs_data <- aggregated_data_with_ids[, c("ID", "Gene.Symbol")]
+row.names(aggregated_data_with_ids) <- aggregated_data_with_ids$Gene.Symbol
+
+aggregated_data_with_ids <- aggregated_data_with_ids %>%
+  select(-ID, -Gene.Symbol)
+
+
+
+expression_matrix <- as.matrix(aggregated_data_with_ids)
+
+rownames(fs_data) <- fs_data$Gene.Symbol
+
+
+new_gset <- ExpressionSet(
+  assayData = expression_matrix,       # Replace 'expression_matrix' with your actual matrix of expression data
+  phenoData = phenoData(gset),         # Use the 'phenoData' directly if it is already an AnnotatedDataFrame
+  featureData = AnnotatedDataFrame(fs_data)  # Replace 'fs_data' with your feature data
+)
+
+# Inspecting the new ExpressionSet
+
+gset <- new_gset
+
+
+
+
+
 # assign samples to groups and set up design matrix
 gs <- factor(sml)
-groups <- make.names(c("TNBC","nomral"))
+groups <- make.names(c("TNBC","normal"))
 levels(gs) <- groups
 gset$group <- gs
+
+
+
+
+
+
 design <- model.matrix(~group + 0, gset)
 colnames(design) <- levels(gs)
+
+
+
+
 
 gset <- gset[complete.cases(exprs(gset)), ] # skip missing values
 
@@ -50,8 +162,12 @@ fit2 <- contrasts.fit(fit, cont.matrix)
 fit2 <- eBayes(fit2, 0.01)
 tT <- topTable(fit2, adjust="fdr", sort.by="B", number=250)
 
-tT <- subset(tT, select=c("ID","adj.P.Val","P.Value","t","B","logFC","SPOT_ID"))
+tT <- subset(tT, select=c("ID" ,"Gene.Symbol","adj.P.Val","P.Value","t","B","logFC"))
 write.table(tT, file=stdout(), row.names=F, sep="\t")
+
+
+
+
 
 # Visualize and quality control test results.
 # Build histogram of P-values for all genes. Normal test
@@ -119,4 +235,29 @@ pointLabel(ump$layout, labels = rownames(ump$layout), method="SANN", cex=0.6)
 
 # mean-variance trend, helps to see if precision weights are needed
 plotSA(fit2, main="Mean variance trend, GSE76250")
+
+
+
+
+gene_data <- as.data.frame(t(exprs(gset)))
+pheno_data <- pData(phenoData(gset))
+
+complete <- merge(gene_data, pheno_data, by.x = "row.names", by.y = "row.names")
+
+data_to_plot <- complete %>%
+  select(TOP2A, group)  
+
+# Create the plot
+ggplot(data_to_plot, aes(x = group, y = TOP2A, color = group)) +
+  geom_boxplot() +
+  labs(title = "Expression of TOP2A in TNBC and Normal Samples",
+       x = "Sample Group",
+       y = "Expression Level") +
+  theme_minimal()  # Adds a minimalistic theme to the plot
+
+# Print the plot
+print(ggplot_object)
+
+
+
 

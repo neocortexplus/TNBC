@@ -41,6 +41,8 @@ LogC <- (qx[5] > 100) ||
 if (LogC) { ex[which(ex <= 0)] <- NaN
 exprs(gset) <- log2(ex) }
 
+ex <- exprs(gset)
+
 
 
 ex_df <- as.data.frame(ex)

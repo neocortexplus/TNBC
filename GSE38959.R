@@ -1,4 +1,4 @@
-# Version info: R 4.2.2, Biobase 2.58.0, GEOquery 2.66.0, limma 3.54.0
+# 47 samples 
 ################################################################
 #   Differential expression analysis with limma
 
@@ -9,7 +9,7 @@ library(tidyr)
 library(dplyr)
 library(ggplot2)
 library(Biobase)
-
+library(readxl)
 # load series and platform data from GEO
 # 
 # gset <- tryCatch({
@@ -39,6 +39,7 @@ LogC <- (qx[5] > 100) ||
 if (LogC) { ex[which(ex <= 0)] <- NaN
 exprs(gset) <- log2(ex) }
 
+ex <- exprs(gset)
 
 
 ex_df <- as.data.frame(ex)
@@ -93,7 +94,7 @@ head(aggregated_data_with_ids)
 
 
 
-fs_data <- aggregated_data_with_ids[, c("ID", "Gene.Symbol",)]
+fs_data <- aggregated_data_with_ids[, c("ID", "Gene.Symbol","Gene.ID")]
 row.names(aggregated_data_with_ids) <- aggregated_data_with_ids$Gene.Symbol
 
 aggregated_data_with_ids <- aggregated_data_with_ids %>%
@@ -118,8 +119,8 @@ new_gset <- ExpressionSet(
 
 gset <- new_gset
 
-
-
+max(exprs(gset))
+min(exprs(gset))
 
 
 # assign samples to groups and set up design matrix
@@ -248,4 +249,5 @@ ggplot(data_to_plot, aes(x = group, y = CARMN, color = group)) +
 
 # Print the plot
 print(ggplot_object)
+
 
