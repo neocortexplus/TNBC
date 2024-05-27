@@ -7,7 +7,7 @@ library(dplyr)
 library(ggplot2)
 library(Biobase)
 library(readxl)
-
+library(sva)
 
 ###### GSE38959
 
@@ -256,7 +256,70 @@ new_gset <- ExpressionSet(
 
 # Inspecting the new ExpressionSet
 
-gset <- new_gset
+GSE76250 <- new_gset
+
+max(exprs(GSE76250))
+min(exprs(GSE76250))
+
+save(GSE76250, file = "/home/aiusrdata/RCode/TNBC/GSE76250.RData")
+load("/home/aiusrdata/RCode/TNBC/GSE76250.RData")
+
+summary(GSE76250)  # Gives a summary of the ExpressionSet
+str(GSE76250)      # Shows the structure of the ExpressionSet
 
 
+
+
+######### meta 
+
+load("/home/aiusrdata/RCode/TNBC/GSE38959.RData")
+load("/home/aiusrdata/RCode/TNBC/GSE76250.RData")
+
+GSE38959_ex <- exprs(GSE38959)
+GSE76250_ex <- exprs(GSE76250)
+
+common_genes <- intersect(rownames(GSE38959_ex), rownames(GSE76250_ex))
+
+GSE38959_ex_common <- GSE38959_ex[common_genes, ]
+GSE76250_ex_common <- GSE76250_ex[common_genes, ]
+dim(GSE38959_ex_common)
+dim(GSE76250_ex_common)
+all <- cbind(GSE38959_ex_common, GSE76250_ex_common)
+
+t_all <- t(all)
+
+dim(t_all)
+
+batch <- c(rep(0, ncol(GSE38959_ex_common)), rep(1, ncol(GSE76250_ex_common)))
+batch <-   factor(batch)
+
+ex <- na.omit(ex)
+ex <- ex[!duplicated(ex), ]
+
+
+# Perform UMAP dimensionality reduction
+ump <- umap(t_all, n_neighbors = 5, random_state = 123)
+
+# Plotting
+par(mar=c(3,3,2,6), xpd=TRUE)
+plot(ump$layout, main="UMAP plot, nbrs=5", xlab="", ylab="", col=batch, pch=20, cex=1.5)
+
+# Add legend
+legend("topright", inset=c(-0.15,0), legend=c("GSE38959", "GSE76250"), pch=20,
+       col=1:2, title="Group", pt.cex=1.5)
+
+allc<- ComBat(all, batch)
+dim(allc)
+
+
+# Perform UMAP dimensionality reduction
+ump <- umap(t(allc), n_neighbors = 5, random_state = 123)
+
+# Plotting
+par(mar=c(3,3,2,6), xpd=TRUE)
+plot(ump$layout, main="UMAP plot, nbrs=5", xlab="", ylab="", col=batch, pch=20, cex=1.5)
+
+# Add legend
+legend("topright", inset=c(-0.15,0), legend=c("GSE38959", "GSE76250"), pch=20,
+       col=1:2, title="Group", pt.cex=1.5)
 
