@@ -278,13 +278,77 @@ load("/home/aiusrdata/RCode/TNBC/GSE76250.RData")
 GSE38959_ex <- exprs(GSE38959)
 GSE76250_ex <- exprs(GSE76250)
 
+GSE38959_fs <- fData(GSE38959)
+GSE76250_fs <- fData(GSE76250)
+
+
+GSE38959_pd <- pData(phenoData(GSE38959))
+GSE76250_pd <- pData(phenoData(GSE76250))
+
+
 common_genes <- intersect(rownames(GSE38959_ex), rownames(GSE76250_ex))
 
 GSE38959_ex_common <- GSE38959_ex[common_genes, ]
 GSE76250_ex_common <- GSE76250_ex[common_genes, ]
-dim(GSE38959_ex_common)
-dim(GSE76250_ex_common)
+
 all <- cbind(GSE38959_ex_common, GSE76250_ex_common)
+
+all_fs <- GSE38959_fs[common_genes,]
+
+dim(all_fs);dim(GSE38959_ex_common) ; dim(GSE76250_ex_common);dim(all )
+
+
+GSE38959_pd <- GSE38959_pd %>%
+  rename(
+    age = `age (y):ch1`,  # Correctly reference the age column if that's its name
+    disease = `disease state:ch1`,
+    gender = `gender:ch1`
+  )
+
+# Adjustments for GSE76250_pd
+GSE76250_pd <- GSE76250_pd %>%
+  rename(
+    age = `age (yrs):ch1`,  # Ensure this is the correct column name in your dataframe
+    disease = `tissue type:ch1`,
+    gender = `gender:ch1`
+  )
+
+
+all_columns <- union(names(GSE38959_pd), names(GSE76250_pd))
+
+# Add missing columns as NA
+missing_columns_38959 <- setdiff(all_columns, names(GSE38959_pd))
+GSE38959_full <- GSE38959_pd
+for (col in missing_columns_38959) {
+  GSE38959_full[[col]] <- NA
+}
+
+# Ensure the columns are in the same order
+GSE38959_full <- GSE38959_full %>% select(all_of(all_columns))
+
+# Repeat for GSE76250
+missing_columns_76250 <- setdiff(all_columns, names(GSE76250_pd))
+GSE76250_full <- GSE76250_pd
+for (col in missing_columns_76250) {
+  GSE76250_full[[col]] <- NA
+}
+
+# Ensure the columns are in the same order
+GSE76250_full <- GSE76250_full %>% select(all_of(all_columns))
+
+# Now rbind them together
+all_pd <- rbind(GSE38959_full, GSE76250_full)
+
+
+all_gset <- ExpressionSet(
+  assayData = as.matrix(all),
+  phenoData = AnnotatedDataFrame(all_pd),
+  featureData = AnnotatedDataFrame(all_fs)  # Assuming all_fs is already prepared
+)
+
+
+ex <- exprs(all_gset)
+
 
 t_all <- t(all)
 
@@ -322,4 +386,6 @@ plot(ump$layout, main="UMAP plot, nbrs=5", xlab="", ylab="", col=batch, pch=20, 
 # Add legend
 legend("topright", inset=c(-0.15,0), legend=c("GSE38959", "GSE76250"), pch=20,
        col=1:2, title="Group", pt.cex=1.5)
+
+
 
