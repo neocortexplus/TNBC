@@ -15,16 +15,6 @@ library(sva)
 ################################################################
 #   Differential expression analysis with limma
 
-library(GEOquery)
-library(limma)
-library(umap)
-library(tidyr)
-library(dplyr)
-library(ggplot2)
-library(Biobase)
-library(readxl)
-# load series and platform data from GEO
-# 
 # gset <- tryCatch({
 #   getGEO("GSE38959", GSEMatrix = TRUE, AnnotGPL = TRUE)
 # }, error = function(e) e)
@@ -407,20 +397,18 @@ dim(ex)
 
 GSE38959_gsms <- "11111111111111111111111111111100000000000000000"
 
-GSE76250_gsms <- paste0("00000000000000000000000000000000000000000000000000",
-               "00000000000000000000000000000000000000000000000000",
-               "00000000000000000000000000000000000000000000000000",
-               "000000000000000111111111111111111111111111111111")
 
-gsms <- paste0("11111111111111111111111111111100000000000000000",
-                   "00000000000000000000000000000000000000000000000000",
-                   "00000000000000000000000000000000000000000000000000",
-                   "00000000000000000000000000000000000000000000000000",
-                   "000000000000000111111111111111111111111111111111")
+GSE76250_gsms <- paste0("11111111111111111111111111111111111111111111111111",
+               "11111111111111111111111111111111111111111111111111",
+               "11111111111111111111111111111111111111111111111111",
+               "111111111111111000000000000000000000000000000000")
 
 
+gsms <- paste0(GSE38959_gsms, GSE76250_gsms)
 
 sml <- strsplit(gsms, split="")[[1]]
+
+
 
 # log2 transformation
 ex <- exprs(gset)
@@ -434,13 +422,12 @@ ex <- exprs(gset)
 
 
 # assign samples to groups and set up design matrix
+gs <- factor(sml, levels = c(0, 1), labels = c("normal", "TNBC"))
+
 gs <- factor(sml)
-groups <- make.names(c("TNBC","normal"))
+groups <- make.names(c("normal","TNBC"))
 levels(gs) <- groups
 gset$group <- gs
-
-
-
 
 
 
