@@ -358,7 +358,9 @@ legend("topright", inset=c(-0.15,0), legend=c("GSE38959", "GSE76250"), pch=20,
 
 allc<- ComBat(all, batch)
 dim(allc)
-
+boxplot(allc)
+allq <- normalizeQuantiles(allc)
+boxplot(allq)
 
 
 
@@ -375,7 +377,7 @@ legend("topright", inset=c(-0.15,0), legend=c("GSE38959", "GSE76250"), pch=20,
 
 
 all_gset <- ExpressionSet(
-  assayData = as.matrix(allc),
+  assayData = as.matrix(allq),
   phenoData = AnnotatedDataFrame(all_pd),
   featureData = AnnotatedDataFrame(all_fs)  # Assuming all_fs is already prepared
 )
@@ -548,3 +550,5 @@ ggplot(data_to_plot, aes(x = group, y = TOP2A, color = group)) +
 print(ggplot_object)
 
 
+
+emt <- read_excel("/home/aiusrdata/RCode/TNBC/emt.xls",col_names = TRUE)
