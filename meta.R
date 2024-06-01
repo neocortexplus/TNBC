@@ -9,11 +9,14 @@ library(Biobase)
 library(readxl)
 library(sva)
 
-###### GSE38959
+
+
+
+################################################################
+# GSE38959
 
 # 47 samples 
-################################################################
-#   Differential expression analysis with limma
+
 
 # gset <- tryCatch({
 #   getGEO("GSE38959", GSEMatrix = TRUE, AnnotGPL = TRUE)
@@ -134,8 +137,9 @@ str(GSE38959)      # Shows the structure of the ExpressionSet
 
 
 
-########## GSE76250
 
+####################################################################
+#  GSE76250
 
 gset <- getGEO("GSE76250", GSEMatrix =TRUE, AnnotGPL=TRUE)
 if (length(gset) > 1) idx <- grep("GPL17586", attr(gset, "names")) else idx <- 1
@@ -260,7 +264,11 @@ str(GSE76250)      # Shows the structure of the ExpressionSet
 
 
 
-######### meta 
+
+
+#                     meta 
+
+###############################################      
 
 load("/home/aiusrdata/RCode/TNBC/GSE38959.RData")
 load("/home/aiusrdata/RCode/TNBC/GSE76250.RData")
@@ -493,7 +501,6 @@ volcanoplot(fit2, coef=ct, main=colnames(fit2)[ct], pch=20,
 plotMD(fit2, column=ct, status=dT[,ct], legend=F, pch=20, cex=1)
 abline(h=0)
 
-################################################################
 # General expression data analysis
 ex <- exprs(gset)
 
@@ -552,3 +559,5 @@ print(ggplot_object)
 
 
 emt <- read_excel("/home/aiusrdata/RCode/TNBC/emt.xls",col_names = TRUE)
+
+

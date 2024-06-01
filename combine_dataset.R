@@ -245,7 +245,7 @@ save(GSE76124, file = "/home/aiusrdata/RCode/TNBC/GSE76124.RData")
 
 
 
-
+##################################################
 ############# combine 
 
 
@@ -258,8 +258,6 @@ GSE76124_ex <- exprs(GSE76124)
 
 GSE102088_fs <-fData(GSE102088)
 GSE76124_fs <- fData(GSE76124)
-
-
 
 
 
@@ -420,7 +418,7 @@ legend("topright", inset=c(-0.15,0), legend=c("GSE102088", "GSE76124"), pch=20,
 
 
 combinedData <- ExpressionSet(
-  assayData = as.matrix(allq),
+  assayData = as.matrix(allc),
   phenoData = AnnotatedDataFrame(all_pd),
   featureData = AnnotatedDataFrame(all_fs)  # Assuming all_fs is already prepared
 )
@@ -431,7 +429,7 @@ save(combinedData, file = "/home/aiusrdata/RCode/TNBC/combinedData.RData")
 
 ########################################################
 
-#            combined data 
+#           DEG META 
 
 
 
@@ -530,7 +528,7 @@ volcanoplot(fit2, coef=ct, main=colnames(fit2)[ct], pch=20,
 plotMD(fit2, column=ct, status=dT[,ct], legend=F, pch=20, cex=1)
 abline(h=0)
 
-################################################################
+
 # General expression data analysis
 ex <- exprs(gset)
 
