@@ -373,7 +373,7 @@ boxplot(allq)
 
 
 # Perform UMAP dimensionality reduction
-ump <- umap(t(allc), n_neighbors = 5, random_state = 123)
+ump <- umap(t(allq), n_neighbors = 5, random_state = 123)
 
 # Plotting
 par(mar=c(3,3,2,6), xpd=TRUE)
@@ -472,6 +472,17 @@ write.table(tT, file=stdout(), row.names=F, sep="\t")
 # Build histogram of P-values for all genes. Normal test
 # assumption is that most genes are not differentially expressed.
 tT2 <- topTable(fit2, adjust="fdr", sort.by="B", number=Inf)
+
+save(tT2, file = "/home/aiusrdata/RCode/TNBC/results/meta_tT2.RData")
+
+
+
+upregulated_all <- tT2[tT2$logFC >= 2 & tT2$adj.P.Val < 0.05, ]
+downregulated_all <- tT2[tT2$logFC <= -2 & tT2$adj.P.Val < 0.05, ]
+
+dim(upregulated_all);dim(downregulated_all)
+
+
 hist(tT2$adj.P.Val, col = "grey", border = "white", xlab = "P-adj",
      ylab = "Number of genes", main = "P-adj value distribution")
 

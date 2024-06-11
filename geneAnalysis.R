@@ -13,14 +13,17 @@ library(AnnotationDbi)
 # Load the environments and data
 env_GSE76250 <- new.env()
 env_GSE38959 <- new.env()
+env_meta <- new.env()
+
 
 load("~/RCode/TNBC/results/GSE76250_tT2.RData", envir = env_GSE76250)
 load("~/RCode/TNBC/results/GSE38959_tT2.RData", envir = env_GSE38959)
+load("~/RCode/TNBC/meta_tT2.RData",envir = env_meta)
 
 
 GSE76250_tT2 <- env_GSE76250$tT2
 GSE38959_tT2 <- env_GSE38959$tT2
-
+meta <- env_meta$tT2
 
 
 
@@ -65,6 +68,7 @@ downregulated_GSE38959 <- GSE38959_tT2[GSE38959_tT2$logFC  <=-2 & GSE38959_tT2$a
 dim(all_regulated_GSE38959);dim(upregulated_GSE38959);dim(downregulated_GSE38959)
 
 
+
 # common_all_regulated_genes <- inner_join(all_regulated_GSE38959, all_regulated_GSE76250, by = "Gene.Symbol")
 # dim(common_all_regulated_genes)
 
@@ -73,6 +77,12 @@ common_upregulated_genes <- as.data.frame(intersect(upregulated_GSE76250$Gene.Sy
 common_downregulated_genes <- as.data.frame(intersect(downregulated_GSE76250$Gene.Symbol, downregulated_GSE38959$Gene.Symbol))
 dim(common_all_regulated_genes);dim(common_upregulated_genes);dim(common_downregulated_genes)
 
+# META
+
+meta_GSE76250_GSE38959 <- meta[abs(meta$logFC) >= 1 & meta$adj.P.Val < p_value_threshold, ]
+upregulated_meta_GSE76250_GSE38959 <- meta[meta$logFC >= 1 & meta$adj.P.Val < p_value_threshold, ]
+downregulated_meta_GSE76250_GSE38959 <- meta[meta$logFC <= -1 & meta$adj.P.Val < p_value_threshold, ]
+dim(meta_GSE76250_GSE38959);dim(upregulated_meta_GSE76250_GSE38959);dim(downregulated_meta_GSE76250_GSE38959)
 
 
 # cat("Common Upregulated Genes:\n",sep="")
@@ -84,11 +94,10 @@ cat(common_downregulated_genes,sep="\n")
 
 # GO - Pathway Analysis ####
 
-head(all_regulated_GSE76250)
-head(all_regulated_GSE76250$Gene.ID)
 
 gene_vector1 <- setNames(GSE76250_tT2$logFC, GSE76250_tT2$Gene.ID)
 gene_vector2 <- setNames(GSE38959_tT2$logFC,GSE38959_tT2$Gene.ID)
+gene_vector3 <- setNames(meta$logFC,meta$Gene.ID)
 
 
 ego1 <- enrichGO(gene          = all_regulated_GSE76250$Gene.ID,
@@ -109,7 +118,17 @@ ego2 <- enrichGO(gene          = all_regulated_GSE38959$Gene.ID,
                  qvalueCutoff  = 0.05,
                  readable      = TRUE)
 
-dim(ego1);dim(ego2)
+ego3 <- enrichGO(gene          = meta_GSE76250_GSE38959$Gene.ID,
+                 universe      = names(gene_vector3),
+                 OrgDb         = org.Hs.eg.db,
+                 ont           = "ALL",
+                 pAdjustMethod = "BH",
+                 pvalueCutoff  = 0.05,
+                 qvalueCutoff  = 0.05,
+                 readable      = TRUE)
+
+
+dim(ego1);dim(ego2);dim(ego3)
 head(ego1,100)
 head(ego2,100)
 
@@ -134,6 +153,10 @@ gene.df2 <- bitr(all_regulated_GSE38959$Gene.ID, fromType = "ENTREZID",
                  toType = c("ENSEMBL", "SYMBOL"),
                  OrgDb = org.Hs.eg.db)
 
+gene.df3 <- bitr(meta_GSE76250_GSE38959$Gene.ID, fromType = "ENTREZID",
+                 toType = c("ENSEMBL", "SYMBOL"),
+                 OrgDb = org.Hs.eg.db)
+
 
 enrich1 <- enrichGO(gene         = gene.df1$ENSEMBL,
                  OrgDb         = org.Hs.eg.db,
@@ -152,8 +175,16 @@ enrich2 <- enrichGO(gene         = gene.df2$ENSEMBL,
                     qvalueCutoff  = 0.05)
 
 
+enrich3 <- enrichGO(gene         = gene.df3$ENSEMBL,
+                    OrgDb         = org.Hs.eg.db,
+                    keyType       = 'ENSEMBL',
+                    ont           = "ALL",
+                    pAdjustMethod = "BH",
+                    pvalueCutoff  = 0.01,
+                    qvalueCutoff  = 0.05)
 
-dim(enrich1);dim(enrich2)
+
+dim(enrich1);dim(enrich2);dim(enrich3)
 head(enrich1,100)
 head(enrich2,100)
 
@@ -165,6 +196,7 @@ head(enrich2,100)
 
 sorted_gene_vector1 <- sort(gene_vector1, decreasing = TRUE)
 sorted_gene_vector2 <- sort(gene_vector2, decreasing = TRUE)
+sorted_gene_vector3 <- sort(gene_vector3, decreasing = TRUE)
 
 
 
@@ -193,6 +225,14 @@ head(ego3,100)
 x <- as.data.frame(ego3)
 dim(x)
 
+gseGO3 <- gseGO(geneList     = sorted_gene_vector3,
+                OrgDb        = org.Hs.eg.db,
+                ont          = "ALL",
+                minGSSize    = 100,
+                maxGSSize    = 500,
+                pvalueCutoff = 0.05,
+                verbose      = FALSE)
+
 
 kk1 <- enrichKEGG(gene         = as.character(all_regulated_GSE76250$Gene.ID),
                  organism     = 'hsa',
@@ -202,7 +242,12 @@ kk1 <- enrichKEGG(gene         = as.character(all_regulated_GSE76250$Gene.ID),
 kk2 <- enrichKEGG(gene         = as.character(all_regulated_GSE38959$Gene.ID),
                  organism     = 'hsa',
                  pvalueCutoff = 0.05)
-head(kk1,100);head(kk2,100)
+
+kk_m1 <- enrichKEGG(gene         = as.character(meta_GSE76250_GSE38959$Gene.ID),
+                  organism     = 'hsa',
+                  pvalueCutoff = 0.05)
+
+head(kk1,100);head(kk2,100);head(kk_m1)
 
 
 
@@ -213,6 +258,13 @@ kk3 <- gseKEGG(geneList     = sorted_gene_vector1,
                verbose      = FALSE)
 
 kk4 <- gseKEGG(geneList     = sorted_gene_vector2,
+               organism     = 'hsa',
+               minGSSize    = 120,
+               pvalueCutoff = 0.05,
+               verbose      = FALSE)
+
+
+kkm1 <- gseKEGG(geneList     = sorted_gene_vector3,
                organism     = 'hsa',
                minGSSize    = 120,
                pvalueCutoff = 0.05,
@@ -230,6 +282,11 @@ mkk2 <- enrichMKEGG(gene = as.character(all_regulated_GSE38959$Gene.ID),
                    organism = 'hsa',
                    pvalueCutoff = 1,
                    qvalueCutoff = 1)
+mkk3 <- enrichMKEGG(gene = as.character(meta_GSE76250_GSE38959$Gene.ID),
+                    organism = 'hsa',
+                    pvalueCutoff = 1,
+                    qvalueCutoff = 1)
+
 
 dim(mkk1);dim(mkk2)
 head(mkk1);head(mkk2)                   
@@ -241,6 +298,11 @@ mkk3 <- gseMKEGG(geneList = sorted_gene_vector1,
                  pvalueCutoff = 1)
 
 mkk4 <- gseMKEGG(geneList = sorted_gene_vector2,
+                 organism = 'hsa',
+                 pvalueCutoff = 1)
+
+
+mkk5 <- gseMKEGG(geneList = sorted_gene_vector3,
                  organism = 'hsa',
                  pvalueCutoff = 1)
 
@@ -262,6 +324,7 @@ hsa04110 <- pathview(gene.data  = sorted_gene_vector,
 
 w1 <- enrichWP(as.character(all_regulated_GSE38959$Gene.ID), organism = "Homo sapiens") 
 w2 <- enrichWP(as.character(all_regulated_GSE76250$Gene.ID), organism = "Homo sapiens") 
+w3 <- enrichWP(as.character(meta_GSE76250_GSE38959$Gene.ID), organism = "Homo sapiens") 
 
 head(w1);head(w2)
 
@@ -309,19 +372,29 @@ x2 <- enrichDO(gene          = all_regulated_GSE38959$Gene.ID,
               qvalueCutoff  = 0.01,
               readable      = FALSE)
 
+x3 <- enrichDO(gene          = meta_GSE76250_GSE38959$Gene.ID,
+               ont           = "DO",
+               pvalueCutoff  = 0.05,
+               pAdjustMethod = "BH",
+               universe      = names(sorted_gene_vector2),
+               minGSSize     = 5,
+               maxGSSize     = 500,
+               qvalueCutoff  = 0.01,
+               readable      = FALSE)
+
 head(x1,16)
 dim(x1)
 
 
 ncg1 <- enrichNCG(all_regulated_GSE76250$Gene.ID) 
 ncg2 <- enrichNCG(all_regulated_GSE38959$Gene.ID) 
-
+ncg3 <- enrichNCG(meta_GSE76250_GSE38959$Gene.ID) 
 head(ncg2)
 
 
 dgn1 <- enrichDGN(all_regulated_GSE76250$Gene.ID) 
 dgn2 <- enrichDGN(all_regulated_GSE38959$Gene.ID) 
-
+dgn3 <- enrichDGN(meta_GSE76250_GSE38959$Gene.ID) 
 
 head(dgn1)
 
@@ -338,6 +411,12 @@ y2 <- gseDO(sorted_gene_vector2,
             pAdjustMethod = "BH",
             verbose       = FALSE)
 
+y3 <- gseDO(sorted_gene_vector3,
+            minGSSize     = 120,
+            pvalueCutoff  = 0.2,
+            pAdjustMethod = "BH",
+            verbose       = FALSE)
+
 head(y, 3)
 
 
@@ -346,6 +425,11 @@ ncg1 <- gseNCG(sorted_gene_vector1,
               pAdjustMethod = "BH",
               verbose       = FALSE)
 ncg2 <- gseNCG(sorted_gene_vector2,
+               pvalueCutoff  = 0.5,
+               pAdjustMethod = "BH",
+               verbose       = FALSE)
+
+ncg3 <- gseNCG(sorted_gene_vector3,
                pvalueCutoff  = 0.5,
                pAdjustMethod = "BH",
                verbose       = FALSE)
