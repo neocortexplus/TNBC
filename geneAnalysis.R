@@ -4,7 +4,7 @@ library(umap)
 library(tidyr)
 library(dplyr)
 library(ggplot2)
-library(Biobase)
+library(Biobase)                                                                                      
 library(readxl)
 library(clusterProfiler)
 library(org.Hs.eg.db)
@@ -22,22 +22,57 @@ GSE76250_tT2 <- env_GSE76250$tT2
 GSE38959_tT2 <- env_GSE38959$tT2
 
 
+
+
+# Convert Gene Symbols to Entrez IDs, including handling of multiple mappings
+gene_conversion <- tryCatch({
+  bitr(GSE76250_tT2$Gene.Symbol, fromType = "SYMBOL",
+       toType = "ENTREZID", OrgDb = org.Hs.eg.db, drop = FALSE)
+}, error = function(e) {
+  message("Error during conversion: ", e)
+  return(data.frame(SYMBOL = character(), ENTREZID = character()))  # return empty dataframe on error
+})
+
+# Assuming taking the first mapping if multiple mappings exist
+gene_conversion <- gene_conversion[!duplicated(gene_conversion$SYMBOL), ]
+
+GSE76250_tT2 <- merge(GSE76250_tT2, gene_conversion, by.x = "Gene.Symbol", by.y = "SYMBOL", all.x = TRUE)
+
+# Rename the column for clarity
+colnames(GSE76250_tT2)[colnames(GSE76250_tT2) == "ENTREZID"] <- "Gene.ID"
+
+head(GSE76250_tT2)
+
+GSE76250_tT2$ID <- GSE76250_tT2$Gene.ID
+head(GSE76250_tT2)
+
+GSE76250_tT2$ID <- as.integer(GSE76250_tT2$ID)
+GSE76250_tT2 <- GSE76250_tT2[!is.na(GSE76250_tT2$Gene.ID), ]
+
+summary(GSE76250_tT2);summary(GSE38959_tT2)
+
+
 p_value_threshold <- 0.05
 
-all_regulated_GSE76250 <-GSE76250_tT2[abs(GSE76250_tT2$logFC >= 1) & GSE76250_tT2$adj.P.Val < p_value_threshold, ]
+all_regulated_GSE76250 <- GSE76250_tT2[abs(GSE76250_tT2$logFC) >= 1 & GSE76250_tT2$adj.P.Val < p_value_threshold, ]
 upregulated_GSE76250 <- GSE76250_tT2[GSE76250_tT2$logFC >= 1 & GSE76250_tT2$adj.P.Val < p_value_threshold, ]
 downregulated_GSE76250 <- GSE76250_tT2[GSE76250_tT2$logFC <= -1 & GSE76250_tT2$adj.P.Val < p_value_threshold, ]
-
+dim(all_regulated_GSE76250);dim(upregulated_GSE76250);dim(downregulated_GSE76250)
 
 all_regulated_GSE38959 <- GSE38959_tT2[abs(GSE38959_tT2$logFC) >= 2 & GSE38959_tT2$adj.P.Val < p_value_threshold, ]
-upregulated_GSE38959 <- GSE38959_tT2[GSE38959_tT2$logFC >= 1 & GSE38959_tT2$adj.P.Val < p_value_threshold, ]
-downregulated_GSE38959 <- GSE38959_tT2[GSE38959_tT2$logFC  <=-1 & GSE38959_tT2$adj.P.Val < p_value_threshold, ]
-dim(downregulated_GSE38959)
+upregulated_GSE38959 <- GSE38959_tT2[GSE38959_tT2$logFC >= 2 & GSE38959_tT2$adj.P.Val < p_value_threshold, ]
+downregulated_GSE38959 <- GSE38959_tT2[GSE38959_tT2$logFC  <=-2 & GSE38959_tT2$adj.P.Val < p_value_threshold, ]
+dim(all_regulated_GSE38959);dim(upregulated_GSE38959);dim(downregulated_GSE38959)
 
 
-common_all_regulated_genes <- as.data.frame(intersect(all_regulated_GSE38959,all_regulated_GSE76250))
+# common_all_regulated_genes <- inner_join(all_regulated_GSE38959, all_regulated_GSE76250, by = "Gene.Symbol")
+# dim(common_all_regulated_genes)
+
+common_all_regulated_genes <- as.data.frame(intersect(all_regulated_GSE38959$Gene.Symbol , all_regulated_GSE76250$Gene.Symbol))
 common_upregulated_genes <- as.data.frame(intersect(upregulated_GSE76250$Gene.Symbol, upregulated_GSE38959$Gene.Symbol))
 common_downregulated_genes <- as.data.frame(intersect(downregulated_GSE76250$Gene.Symbol, downregulated_GSE38959$Gene.Symbol))
+dim(common_all_regulated_genes);dim(common_upregulated_genes);dim(common_downregulated_genes)
+
 
 
 # cat("Common Upregulated Genes:\n",sep="")
@@ -49,152 +84,173 @@ cat(common_downregulated_genes,sep="\n")
 
 # GO - Pathway Analysis ####
 
-head(upregulated_GSE38959)
-head(upregulated_GSE38959$Gene.ID)
+head(all_regulated_GSE76250)
+head(all_regulated_GSE76250$Gene.ID)
 
-gene_vector <- setNames(GSE38959_tT2$logFC, GSE38959_tT2$Gene.ID)
+gene_vector1 <- setNames(GSE76250_tT2$logFC, GSE76250_tT2$Gene.ID)
+gene_vector2 <- setNames(GSE38959_tT2$logFC,GSE38959_tT2$Gene.ID)
 
-ego <- enrichGO(gene          = upregulated_GSE38959$Gene.ID,
-                universe      = names(gene_vector),
+
+ego1 <- enrichGO(gene          = all_regulated_GSE76250$Gene.ID,
+                universe      = names(gene_vector1),
                 OrgDb         = org.Hs.eg.db,
-                ont           = "CC",
+                ont           = "ALL",
                 pAdjustMethod = "BH",
                 pvalueCutoff  = 0.05,
                 qvalueCutoff  = 0.05,
                 readable      = TRUE)
-dim(ego)
-head(ego,100)
-x <- as.data.frame(ego)
-dim(x)
+
+ego2 <- enrichGO(gene          = all_regulated_GSE38959$Gene.ID,
+                 universe      = names(gene_vector2),
+                 OrgDb         = org.Hs.eg.db,
+                 ont           = "ALL",
+                 pAdjustMethod = "BH",
+                 pvalueCutoff  = 0.05,
+                 qvalueCutoff  = 0.05,
+                 readable      = TRUE)
+
+dim(ego1);dim(ego2)
+head(ego1,100)
+head(ego2,100)
+
+# x <- as.data.frame(ego)
+# dim(x)
 
 
-library(enrichplot)
-barplot(ego, showCategory=20) 
-mutate(ego, qscore = -log(p.adjust, base=10)) %>% 
-  barplot(x="qscore")
+top_terms_combined <- x %>%
+  filter(p.adjust < 0.05) %>%   # Filter for adjusted p-values less than 0.05
+  group_by(ONTOLOGY) %>%        # Group data by the ONTOLOGY column
+  arrange(p.adjust) %>%         # Arrange data within each group by p.adjust
+  slice_head(n = 10) %>%        # Select the top 10 entries for each group
+  ungroup()                     # Remove the grouping
 
 
 
-
-# decrease text size by 20%
-par(cex=0.2)  
-
-goplot(ego)
-
-
-gene.df <- bitr(upregulated_GSE38959$Gene.ID, fromType = "ENTREZID",
+gene.df1 <- bitr(all_regulated_GSE76250$Gene.ID, fromType = "ENTREZID",
                 toType = c("ENSEMBL", "SYMBOL"),
                 OrgDb = org.Hs.eg.db)
 
-ego2 <- enrichGO(gene         = gene.df$ENSEMBL,
+gene.df2 <- bitr(all_regulated_GSE38959$Gene.ID, fromType = "ENTREZID",
+                 toType = c("ENSEMBL", "SYMBOL"),
+                 OrgDb = org.Hs.eg.db)
+
+
+enrich1 <- enrichGO(gene         = gene.df1$ENSEMBL,
                  OrgDb         = org.Hs.eg.db,
                  keyType       = 'ENSEMBL',
-                 ont           = "CC",
+                 ont           = "ALL",
                  pAdjustMethod = "BH",
                  pvalueCutoff  = 0.01,
                  qvalueCutoff  = 0.05)
 
+enrich2 <- enrichGO(gene         = gene.df2$ENSEMBL,
+                    OrgDb         = org.Hs.eg.db,
+                    keyType       = 'ENSEMBL',
+                    ont           = "ALL",
+                    pAdjustMethod = "BH",
+                    pvalueCutoff  = 0.01,
+                    qvalueCutoff  = 0.05)
 
 
-dim(ego2)
-head(ego2,100)
-x <- as.data.frame(ego2)
-dim(x)
+
+dim(enrich1);dim(enrich2)
+head(enrich1,100)
+head(enrich2,100)
+
+# x <- as.data.frame(ego2)
+# dim(x)
 
 
-dotplot(ego, showCategory=30) + ggtitle("dotplot for ORA")
-dotplot(ego2, showCategory=30) + ggtitle("dotplot for GSEA")
 
 
-sorted_gene_vector <- sort(gene_vector, decreasing = TRUE)
+sorted_gene_vector1 <- sort(gene_vector1, decreasing = TRUE)
+sorted_gene_vector2 <- sort(gene_vector2, decreasing = TRUE)
 
 
-edox <- setReadable(ego, 'org.Hs.eg.db', 'ENTREZID')
-p1 <- cnetplot(edox, foldChange=gene_vector)
-p2 <- cnetplot(edox, categorySize="pvalue", foldChange=sorted_gene_vector)
-p3 <- cnetplot(edox, foldChange=geneList, circular = TRUE, colorEdge = TRUE) 
-cowplot::plot_grid(p1, p2, p3, ncol=3, labels=LETTERS[1:3], rel_widths=c(.8, .8, 1.2))
-
-p1 <- cnetplot(edox, node_label="category", 
-               cex_label_category = 1.2) 
-p2 <- cnetplot(edox, node_label="gene", 
-               cex_label_gene = 0.8) 
-p3 <- cnetplot(edox, node_label="all") 
-
-p4 <- cnetplot(edox, node_label="none", 
-               color_category='firebrick', 
-               color_gene='steelblue') 
-cowplot::plot_grid(p1, p2, p3, p4, ncol=2, labels=LETTERS[1:4])
 
 
-p1 <- heatplot(edox, showCategory=5)
-p2 <- heatplot(edox, foldChange=geneList, showCategory=5)
-cowplot::plot_grid(p1, p2, ncol=1, labels=LETTERS[1:2])
 
 
-edox2 <- pairwise_termsim(edox)
-p1 <- treeplot(edox2)
-p2 <- treeplot(edox2, hclust_method = "average")
-aplot::plot_list(p1, p2, tag_levels='A')
-
-
-edo <- pairwise_termsim(ego)
-p1 <- emapplot(edo)
-p2 <- emapplot(edo, cex_category=1.5)
-p3 <- emapplot(edo, layout="kk")
-p4 <- emapplot(edo, cex_category=1.5,layout="kk") 
-cowplot::plot_grid(p1, p2, p3, p4, ncol=2, labels=LETTERS[1:4])
-
-upsetplot(ego)
-
-ridgeplot(ego)
-
-# Now use the sorted vector in the gseGO function
-ego3 <- gseGO(geneList     = sorted_gene_vector,
+gseGO1 <- gseGO(geneList     = sorted_gene_vector1,
               OrgDb        = org.Hs.eg.db,
-              ont          = "CC",
+              ont          = "ALL",
               minGSSize    = 100,
               maxGSSize    = 500,
               pvalueCutoff = 0.05,
               verbose      = FALSE)
 
+gseGO2 <- gseGO(geneList     = sorted_gene_vector2,
+                OrgDb        = org.Hs.eg.db,
+                ont          = "ALL",
+                minGSSize    = 100,
+                maxGSSize    = 500,
+                pvalueCutoff = 0.05,
+                verbose      = FALSE)
 
-dim(ego3)
+
+dim(gseGO1);dim(gseGO2)
 head(ego3,100)
 x <- as.data.frame(ego3)
 dim(x)
 
 
-kk <- enrichKEGG(gene         = as.character(upregulated_GSE38959$Gene.ID),
+kk1 <- enrichKEGG(gene         = as.character(all_regulated_GSE76250$Gene.ID),
                  organism     = 'hsa',
                  pvalueCutoff = 0.05)
-head(kk)
+
+
+kk2 <- enrichKEGG(gene         = as.character(all_regulated_GSE38959$Gene.ID),
+                 organism     = 'hsa',
+                 pvalueCutoff = 0.05)
+head(kk1,100);head(kk2,100)
 
 
 
-kk2 <- gseKEGG(geneList     = sorted_gene_vector,
+kk3 <- gseKEGG(geneList     = sorted_gene_vector1,
                organism     = 'hsa',
                minGSSize    = 120,
                pvalueCutoff = 0.05,
                verbose      = FALSE)
-head(kk2)
+
+kk4 <- gseKEGG(geneList     = sorted_gene_vector2,
+               organism     = 'hsa',
+               minGSSize    = 120,
+               pvalueCutoff = 0.05,
+               verbose      = FALSE)
+
+head(kk3);head(kk4)
 
 
 
-mkk <- enrichMKEGG(gene = as.character(upregulated_GSE38959$Gene.ID),
+mkk1 <- enrichMKEGG(gene = as.character(all_regulated_GSE76250$Gene.ID),
                    organism = 'hsa',
                    pvalueCutoff = 1,
                    qvalueCutoff = 1)
-head(mkk)                   
+mkk2 <- enrichMKEGG(gene = as.character(all_regulated_GSE38959$Gene.ID),
+                   organism = 'hsa',
+                   pvalueCutoff = 1,
+                   qvalueCutoff = 1)
+
+dim(mkk1);dim(mkk2)
+head(mkk1);head(mkk2)                   
 
 
 
-mkk2 <- gseMKEGG(geneList = sorted_gene_vector,
+mkk3 <- gseMKEGG(geneList = sorted_gene_vector1,
                  organism = 'hsa',
                  pvalueCutoff = 1)
-head(mkk2)
+
+mkk4 <- gseMKEGG(geneList = sorted_gene_vector2,
+                 organism = 'hsa',
+                 pvalueCutoff = 1)
+
+
+head(mkk3);head(mkk4)
+
 
 browseKEGG(kk, 'hsa04110')
+
+
 
 library("pathview")
 hsa04110 <- pathview(gene.data  = sorted_gene_vector,
@@ -204,16 +260,19 @@ hsa04110 <- pathview(gene.data  = sorted_gene_vector,
 
 
 
-w1 <- enrichWP(as.character(upregulated_GSE38959$Gene.ID), organism = "Homo sapiens") 
+w1 <- enrichWP(as.character(all_regulated_GSE38959$Gene.ID), organism = "Homo sapiens") 
+w2 <- enrichWP(as.character(all_regulated_GSE76250$Gene.ID), organism = "Homo sapiens") 
 
-head(w1)
+head(w1);head(w2)
+
+
 
 w2 <- gseWP(sorted_gene_vector, organism = "Homo sapiens")
 head(w2)
 
 library(ReactomePA)
 
-x <- enrichPathway(gene=upregulated_GSE38959$Gene.ID, pvalueCutoff = 0.05, readable=TRUE)
+x <- enrichPathway(gene=all_regulated_GSE76250$Gene.ID, pvalueCutoff = 0.05, readable=TRUE)
 head(x)
 
 
@@ -230,49 +289,78 @@ viewPathway("E2F mediated regulation of DNA replication",
 
 
 
-x <- enrichDO(gene          = upregulated_GSE38959$Gene.ID,
+x1 <- enrichDO(gene          = all_regulated_GSE76250$Gene.ID,
               ont           = "DO",
               pvalueCutoff  = 0.05,
               pAdjustMethod = "BH",
-              universe      = names(sorted_gene_vector),
+              universe      = names(sorted_gene_vector1),
               minGSSize     = 5,
               maxGSSize     = 500,
               qvalueCutoff  = 0.01,
               readable      = FALSE)
-head(x,16)
-dim(x)
+
+x2 <- enrichDO(gene          = all_regulated_GSE38959$Gene.ID,
+              ont           = "DO",
+              pvalueCutoff  = 0.05,
+              pAdjustMethod = "BH",
+              universe      = names(sorted_gene_vector2),
+              minGSSize     = 5,
+              maxGSSize     = 500,
+              qvalueCutoff  = 0.01,
+              readable      = FALSE)
+
+head(x1,16)
+dim(x1)
 
 
-ncg <- enrichNCG(upregulated_GSE38959$Gene.ID) 
-head(ncg)
+ncg1 <- enrichNCG(all_regulated_GSE76250$Gene.ID) 
+ncg2 <- enrichNCG(all_regulated_GSE38959$Gene.ID) 
+
+head(ncg2)
 
 
-dgn <- enrichDGN(upregulated_GSE38959$Gene.ID) 
-head(dgn)
+dgn1 <- enrichDGN(all_regulated_GSE76250$Gene.ID) 
+dgn2 <- enrichDGN(all_regulated_GSE38959$Gene.ID) 
 
-y <- gseDO(sorted_gene_vector,
+
+head(dgn1)
+
+y1 <- gseDO(sorted_gene_vector1,
            minGSSize     = 120,
            pvalueCutoff  = 0.2,
            pAdjustMethod = "BH",
            verbose       = FALSE)
+
+
+y2 <- gseDO(sorted_gene_vector2,
+            minGSSize     = 120,
+            pvalueCutoff  = 0.2,
+            pAdjustMethod = "BH",
+            verbose       = FALSE)
+
 head(y, 3)
 
 
-ncg <- gseNCG(sorted_gene_vector,
+ncg1 <- gseNCG(sorted_gene_vector1,
               pvalueCutoff  = 0.5,
               pAdjustMethod = "BH",
               verbose       = FALSE)
+ncg2 <- gseNCG(sorted_gene_vector2,
+               pvalueCutoff  = 0.5,
+               pAdjustMethod = "BH",
+               verbose       = FALSE)
+
 ncg <- setReadable(ncg, 'org.Hs.eg.db')
 head(ncg, 3) 
 
 
 
-dgn <- gseDGN(sorted_gene_vector,
+dgn1 <- gseDGN(sorted_gene_vector1,
               pvalueCutoff  = 0.2,
               pAdjustMethod = "BH",
               verbose       = FALSE)
 dgn <- setReadable(dgn, 'org.Hs.eg.db')
-head(dgn, 3) 
+head(dgn1, 3) 
 
 library(AnnotationHub)
 library(MeSHDbi)
