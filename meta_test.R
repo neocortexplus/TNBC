@@ -149,10 +149,11 @@ gset <- gset[[idx]]
 fvarLabels(gset) <- make.names(fvarLabels(gset))
 
 # group membership for all samples
-gsms <- paste0("00000000000000000000000000000000000000000000000000",
-               "00000000000000000000000000000000000000000000000000",
-               "00000000000000000000000000000000000000000000000000",
-               "000000000000000111111111111111111111111111111111")
+gsms <- paste0("11111111111111111111111111111111111111111111111111",
+               "11111111111111111111111111111111111111111111111111",
+               "11111111111111111111111111111111111111111111111111",
+               "111111111111111000000000000000000000000000000000")
+
 
 
 
@@ -519,8 +520,8 @@ save(GSE86945, file = "/home/aiusrdata/RCode/TNBC/GSE86945.RData")
 #meta
 
 
-load("/home/aiusrdata/RCode/TNBC/GSE38959.RData")
 load("/home/aiusrdata/RCode/TNBC/GSE76250.RData")
+load("/home/aiusrdata/RCode/TNBC/GSE38959.RData")
 load("/home/aiusrdata/RCode/TNBC/GSE86945.RData")
 
 temp <- GSE86945
@@ -668,7 +669,7 @@ legend("topright", inset=c(-0.15,0), legend=c("GSE38959", "GSE76250", "temp"), p
 
 
 all_gset <- ExpressionSet(
-  assayData = as.matrix(allq),
+  assayData = as.matrix(allc),
   phenoData = AnnotatedDataFrame(all_pd),
   featureData = AnnotatedDataFrame(all_fs)  # Assuming all_fs is already prepared
 )
@@ -758,6 +759,9 @@ write.table(tT, file=stdout(), row.names=F, sep="\t")
 tT2 <- topTable(fit2, adjust="fdr", sort.by="B", number=Inf)
 hist(tT2$adj.P.Val, col = "grey", border = "white", xlab = "P-adj",
      ylab = "Number of genes", main = "P-adj value distribution")
+
+save(tT2, file = "/home/aiusrdata/RCode/TNBC/3meta_tT2.RData")
+
 
 # summarize test results as "up", "down" or "not expressed"
 dT <- decideTests(fit2, adjust.method="fdr", p.value=0.05, lfc=0)

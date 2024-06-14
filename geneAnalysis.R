@@ -19,7 +19,8 @@ env_temp1 <- new.env()
 
 load("~/RCode/TNBC/results/GSE76250_tT2.RData", envir = env_GSE76250)
 load("~/RCode/TNBC/results/GSE38959_tT2.RData", envir = env_GSE38959)
-load("~/RCode/TNBC/meta_tT2.RData",envir = env_meta)
+
+load("/home/aiusrdata/RCode/TNBC/meta_tT2_test1.RData",envir = env_meta)
 load("~/RCode/TNBC/3meta_tT2.RData",envir = env_temp1)
 
 
@@ -85,7 +86,6 @@ meta_GSE76250_GSE38959 <- meta[abs(meta$logFC) >= 1 & meta$adj.P.Val < p_value_t
 upregulated_meta_GSE76250_GSE38959 <- meta[meta$logFC >=1 & meta$adj.P.Val < p_value_threshold, ]
 downregulated_meta_GSE76250_GSE38959 <- meta[meta$logFC <= -1 & meta$adj.P.Val < p_value_threshold, ]
 dim(meta_GSE76250_GSE38959);dim(upregulated_meta_GSE76250_GSE38959);dim(downregulated_meta_GSE76250_GSE38959)
-tmp1_tT2
 
 #tmp
 all_regulated_tmp1_tT2 <- tmp1_tT2[abs(tmp1_tT2$logFC) >= 1 & tmp1_tT2$adj.P.Val < p_value_threshold, ]
@@ -208,6 +208,13 @@ enrich3 <- enrichGO(gene         = gene.df3$ENSEMBL,
                     pvalueCutoff  = 0.01,
                     qvalueCutoff  = 0.05)
 
+enrich4 <- enrichGO(gene         = gene.df4$ENSEMBL,
+                    OrgDb         = org.Hs.eg.db,
+                    keyType       = 'ENSEMBL',
+                    ont           = "ALL",
+                    pAdjustMethod = "BH",
+                    pvalueCutoff  = 0.01,
+                    qvalueCutoff  = 0.05)
 
 dim(enrich1);dim(enrich2);dim(enrich3)
 head(enrich1,100)
@@ -222,6 +229,7 @@ head(enrich2,100)
 sorted_gene_vector1 <- sort(gene_vector1, decreasing = TRUE)
 sorted_gene_vector2 <- sort(gene_vector2, decreasing = TRUE)
 sorted_gene_vector3 <- sort(gene_vector3, decreasing = TRUE)
+sorted_gene_vector4 <- sort(gene_vector4, decreasing = TRUE)
 
 
 
@@ -258,6 +266,14 @@ gseGO3 <- gseGO(geneList     = sorted_gene_vector3,
                 pvalueCutoff = 0.05,
                 verbose      = FALSE)
 
+gseGO4 <- gseGO(geneList     = sorted_gene_vector4,
+                OrgDb        = org.Hs.eg.db,
+                ont          = "ALL",
+                minGSSize    = 100,
+                maxGSSize    = 500,
+                pvalueCutoff = 0.05,
+                verbose      = FALSE)
+
 
 kk1 <- enrichKEGG(gene         = as.character(all_regulated_GSE76250$Gene.ID),
                  organism     = 'hsa',
@@ -272,7 +288,11 @@ kk_meta1 <- enrichKEGG(gene         = as.character(meta_GSE76250_GSE38959$Gene.I
                   organism     = 'hsa',
                   pvalueCutoff = 0.05)
 
-dim(kk1);dim(kk2);dim(kk_meta1)
+kk_temp1 <- enrichKEGG(gene         = as.character(all_regulated_tmp1_tT2$Gene.ID),
+                  organism     = 'hsa',
+                  pvalueCutoff = 0.05)
+
+dim(kk1);dim(kk2);dim(kk_meta1);dim(kk_temp1)
 
 head(kk1,100);head(kk2,100);head(kk_m1)
 
