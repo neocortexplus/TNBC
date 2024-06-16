@@ -1,3 +1,4 @@
+# اصل اینه ها یادت باشه فردا
 
 library(GEOquery)
 library(limma)
@@ -648,9 +649,6 @@ gset <- gset[[idx]]
 fvarLabels(gset) <- make.names(fvarLabels(gset))
 
 
-max(exprs(GSE58812))
-min(exprs(GSE58812))
-
 
 # log2 transformation
 ex <- exprs(gset)
@@ -661,6 +659,9 @@ if (LogC) { ex[which(ex <= 0)] <- NaN
 exprs(gset) <- log2(ex) }
 
 ex <- exprs(gset)
+
+max(ex)
+min(ex)
 
 gsms <- paste0(rep("1", ncol(ex)), collapse = "")
 
@@ -890,12 +891,12 @@ load("/home/aiusrdata/RCode/TNBC/GSE76124.RData")
 load("/home/aiusrdata/RCode/TNBC/GSE76250.RData")
 # load("/home/aiusrdata/RCode/TNBC/GSE86945.RData")
 # load("/home/aiusrdata/RCode/TNBC/GSE38959.RData")
-
+load("/home/aiusrdata/RCode/TNBC/GSE102088.RData")
 
 
 temp1 <- GSE76124
 temp2 <- GSE76250
-# temp3 <- GSE86945
+# temp3 <- GSE102088
 # temp4 <- GSE38959
 
 
@@ -955,6 +956,14 @@ temp2_pd <- temp2_pd %>%
     gender = `gender:ch1`
   )
 
+colnames(temp3_pd)
+temp3_pd$gender = 'female'
+temp3_pd <- temp3_pd %>%
+  rename(
+    # age = `age at diag:ch1`,  # Ensure this is the correct column name in your dataframe
+    disease = `ihc:ch1`
+  )
+
 phenotype_data <- list(temp1_pd, temp2_pd)
 all_columns <- names(phenotype_data[[1]])
 for (i in 2:length(phenotype_data)) {
@@ -983,7 +992,27 @@ for (col in missing_columns_temp2) {
 temp2_full <- temp2_full %>% select(all_of(all_columns))
 
 
+# # Repeat for temp3
+# missing_columns_temp3 <- setdiff(all_columns, names(temp3_pd))
+# temp3_full <- temp3_pd
+# for (col in missing_columns_temp3) {
+#   temp3_full[[col]] <- NA
+# }
+# 
+# # Ensure the columns are in the same order
+# temp3_full <- temp3_full %>% select(all_of(all_columns))
 
+
+# # Repeat for temp3
+# colnames(temp3_pd)
+# missing_columns_temp3 <- setdiff(all_columns, names(temp3_pd))
+# temp3_full <- temp3_pd
+# for (col in missing_columns_temp3) {
+#   temp3_full[[col]] <- NA
+# }
+# 
+# # Ensure the columns are in the same order
+# temp3_full <- temp3_full %>% select(all_of(all_columns))
 
 
 # Now rbind them together
@@ -1020,7 +1049,7 @@ par(mar=c(3,3,2,6), xpd=TRUE)
 plot(ump$layout, main="UMAP plot, nbrs=5", xlab="", ylab="", col=batch, pch=20, cex=1.5)
 
 # Add legend
-legend("topright", inset=c(-0.15,0), legend=c("temp1", "temp2"), pch=20,
+legend("topright", inset=c(-0.15,0), legend=c("temp1", "temp2","temp3"), pch=20,
        col=1:4, title="Group", pt.cex=1.5)
 
 allc<- ComBat(all, batch)
@@ -1039,12 +1068,12 @@ par(mar=c(3,3,2,6), xpd=TRUE)
 plot(ump$layout, main="UMAP plot, nbrs=5", xlab="", ylab="", col=batch, pch=20, cex=1.5)
 
 # Add legend
-legend("topright", inset=c(-0.15,0), legend=c("temp1", "temp2"), pch=20,
+legend("topright", inset=c(-0.15,0), legend=c("temp1", "temp2","temp3"), pch=20,
        col=1:4, title="Group", pt.cex=1.5)
 
 
 all_gset <- ExpressionSet(
-  assayData = as.matrix(allc),
+  assayData = as.matrix(allq),
   phenoData = AnnotatedDataFrame(all_pd),
   featureData = AnnotatedDataFrame(all_fs)  # Assuming all_fs is already prepared
 )
@@ -1074,12 +1103,12 @@ temp2_gsms <- paste0("11111111111111111111111111111111111111111111111111",
                      "11111111111111111111111111111111111111111111111111",
                      "111111111111111000000000000000000000000000000000")
 
-# temp3_gsms <- paste0(rep("1", 100), collapse = "")
+temp3_gsms <- paste0(rep("0", 114), collapse = "")
 # 
-# temp4_gsms <- "11111111111111111111111111111100000000000000000"
+# temp3_gsms <- "11111111111111111111111111111100000000000000000"
 # temp4_gsms <-  paste0(rep("1", 100), collapse = "")
 
-gsms <- paste0(temp1_gsms, temp2_gsms)
+gsms <- paste0(temp1_gsms, temp2_gsms,temp3_gsms)
 
 sml <- strsplit(gsms, split="")[[1]]
 
@@ -1138,7 +1167,7 @@ write.table(tT, file=stdout(), row.names=F, sep="\t")
 # assumption is that most genes are not differentially expressed.
 tT2 <- topTable(fit2, adjust="fdr", sort.by="B", number=Inf)
 
-save(tT2, file = "/home/aiusrdata/RCode/TNBC/meta_tT2_test1.RData")
+save(tT2, file = "/home/aiusrdata/RCode/TNBC/meta_tT2_test5.RData")
 
 
 

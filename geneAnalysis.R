@@ -13,21 +13,21 @@ library(AnnotationDbi)
 # Load the environments and data
 env_GSE76250 <- new.env()
 env_GSE38959 <- new.env()
-env_meta <- new.env()
-env_temp1 <- new.env()
+env_meta1 <- new.env()
+env_meta2 <- new.env()
 
 
 load("~/RCode/TNBC/results/GSE76250_tT2.RData", envir = env_GSE76250)
 load("~/RCode/TNBC/results/GSE38959_tT2.RData", envir = env_GSE38959)
-
-load("/home/aiusrdata/RCode/TNBC/meta_tT2_test1.RData",envir = env_meta)
-load("~/RCode/TNBC/3meta_tT2.RData",envir = env_temp1)
+load("~/RCode/TNBC/meta_tT2_test1.RData",envir = env_meta1)
+# load("~/RCode/TNBC/meta_tT2_test3.RData",envir = env_meta2)
+load("~/RCode/TNBC/meta_tT2_test5.RData",envir = env_meta2)
 
 
 GSE76250_tT2 <- env_GSE76250$tT2
 GSE38959_tT2 <- env_GSE38959$tT2
-meta <- env_meta$tT2
-tmp1_tT2 <- env_temp1$tT2
+meta <- env_meta1$tT2
+tmp1_tT2 <- env_meta2$tT2
 
 
 # Convert Gene Symbols to Entrez IDs, including handling of multiple mappings
@@ -92,6 +92,11 @@ all_regulated_tmp1_tT2 <- tmp1_tT2[abs(tmp1_tT2$logFC) >= 1 & tmp1_tT2$adj.P.Val
 upregulated_tmp1_tT2 <- tmp1_tT2[tmp1_tT2$logFC >= 1 & tmp1_tT2$adj.P.Val < p_value_threshold, ]
 downregulated_tmp1_tT2 <- tmp1_tT2[tmp1_tT2$logFC <= -1 & tmp1_tT2$adj.P.Val < p_value_threshold, ]
 dim(all_regulated_tmp1_tT2);dim(upregulated_tmp1_tT2);dim(downregulated_tmp1_tT2)
+
+
+length(intersect(all_regulated_GSE76250$Gene.Symbol , meta_GSE76250_GSE38959$Gene.Symbol))
+length(intersect(all_regulated_GSE76250$Gene.Symbol , all_regulated_tmp1_tT2$Gene.Symbol))
+
 
 
 # cat("Common Upregulated Genes:\n",sep="")
