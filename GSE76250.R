@@ -182,6 +182,8 @@ write.table(tT, file=stdout(), row.names=F, sep="\t")
 
 tT2 <- topTable(fit2, adjust="fdr", sort.by="B", number=Inf)
 
+save(tT2, file = "/home/aiusrdata/RCode/TNBC/results/GSE76250_tT2.RData")
+
 hist(tT2$adj.P.Val, col = "grey", border = "white", xlab = "P-adj",
      ylab = "Number of genes", main = "P-adj value distribution")
 
@@ -484,7 +486,7 @@ ex <- na.omit(ex) # eliminate rows with NAs
 ex <- ex[!duplicated(ex), ]  # remove duplicates
 ump <- umap(t(ex), n_neighbors = 15, random_state = 123)
 par(mar=c(3,3,2,6), xpd=TRUE)
-plot(ump$layout, main="UMAP plot, nbrs=15", xlab="", ylab="", col=gs, pch=20, cex=1.5)
+plot(ump$layout, main="UMAP plot, nbrs=15", xlab="", ylab="", col=gs, pch=10, cex=1.5)
 legend("topright", inset=c(-0.15,0), legend=levels(gs), pch=20,
        col=1:nlevels(gs), title="Group", pt.cex=1.5)
 library("maptools")  # point labels without overlaps
