@@ -10,12 +10,6 @@ library(dplyr)
 library(ggplot2)
 library(Biobase)
 library(readxl)
-# load series and platform data from GEO
-# 
-# gset <- tryCatch({
-#   getGEO("GSE38959", GSEMatrix = TRUE, AnnotGPL = TRUE)
-# }, error = function(e) e)
-
 
 gset <- getGEO("GSE38959", GSEMatrix =TRUE, AnnotGPL=TRUE)
 if (length(gset) > 1) idx <- grep("GPL4133", attr(gset, "names")) else idx <- 1
@@ -25,11 +19,18 @@ gset <- gset[[idx]]
 fvarLabels(gset) <- make.names(fvarLabels(gset))
 
 # group membership for all samples
-gsms <- "11111111111111111111111111111100000000000000000"
-
-
-
+gsms <- "0000000000000000000000000000001111111111111XXXX"
 sml <- strsplit(gsms, split="")[[1]]
+
+# filter out excluded samples (marked as "X")
+sel <- which(sml != "X")
+sml <- sml[sel]
+gset <- gset[ ,sel]
+
+ex <- exprs(gset)
+dim(ex)
+table(sml)
+
 
 # log2 transformation
 ex <- exprs(gset)
@@ -40,7 +41,7 @@ if (LogC) { ex[which(ex <= 0)] <- NaN
 exprs(gset) <- log2(ex) }
 
 ex <- exprs(gset)
-
+colnames(ex)
 
 ex_df <- as.data.frame(ex)
 feature_data <- fData(gset)
@@ -115,9 +116,6 @@ new_gset <- ExpressionSet(
   featureData = AnnotatedDataFrame(fs_data)  # Replace 'fs_data' with your feature data
 )
 
-# Inspecting the new ExpressionSet
-
-# Inspecting the new ExpressionSet
 
 gset <- new_gset
 

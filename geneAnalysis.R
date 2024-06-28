@@ -221,7 +221,7 @@ enrich4 <- enrichGO(gene         = gene.df4$ENSEMBL,
                     pvalueCutoff  = 0.01,
                     qvalueCutoff  = 0.05)
 
-dim(enrich1);dim(enrich2);dim(enrich3)
+dim(enrich1);dim(enrich2);dim(enrich3);dim(enrich4)
 head(enrich1,100)
 head(enrich2,100)
 
@@ -333,6 +333,7 @@ mkk1 <- enrichMKEGG(gene = as.character(all_regulated_GSE76250$Gene.ID),
                    organism = 'hsa',
                    pvalueCutoff = 1,
                    qvalueCutoff = 1)
+
 mkk2 <- enrichMKEGG(gene = as.character(all_regulated_GSE38959$Gene.ID),
                    organism = 'hsa',
                    pvalueCutoff = 1,

@@ -10,13 +10,6 @@ library(ggplot2)
 library(Biobase)
 library(ggrepel)  # Load ggrepel for better label management
 
-# load series and platform data from GEO
-# 
-# gset <- tryCatch({
-#   getGEO("GSE76250", GSEMatrix = TRUE, AnnotGPL = TRUE)
-# }, error = function(e) e)
-
-
 gset <- getGEO("GSE76250", GSEMatrix =TRUE, AnnotGPL=TRUE)
 if (length(gset) > 1) idx <- grep("GPL17586", attr(gset, "names")) else idx <- 1
 gset <- gset[[idx]]
@@ -26,16 +19,14 @@ fvarLabels(gset) <- make.names(fvarLabels(gset))
 
 # group membership for all samples
 
-gsms <- paste0("11111111111111111111111111111111111111111111111111",
-               "11111111111111111111111111111111111111111111111111",
-               "11111111111111111111111111111111111111111111111111",
-               "111111111111111000000000000000000000000000000000")
 
-# gsms <- paste0("00000000000000000000000000000000000000000000000000",
-#                "00000000000000000000000000000000000000000000000000",
-#                "00000000000000000000000000000000000000000000000000",
-#                "000000000000000111111111111111111111111111111111")
-# 
+gsms <- paste0("00000000000000000000000000000000000000000000000000",
+               "00000000000000000000000000000000000000000000000000",
+               "00000000000000000000000000000000000000000000000000",
+               "000000000000000111111111111111111111111111111111")
+sml <- strsplit(gsms, split="")[[1]]
+
+
 
 
 sml <- strsplit(gsms, split="")[[1]]
@@ -50,7 +41,7 @@ exprs(gset) <- log2(ex) }
 
 ex <- exprs(gset)
 
-
+colnames(ex)
 
 ex_df <- as.data.frame(ex)
 feature_data <- fData(gset)
@@ -84,7 +75,7 @@ feature_data <- feature_data %>%
 
 
 # feature_data <- feature_data[, c("ID", "Gene.ID", "Gene.symbol", "Platform_SPOTID")]
-feature_data <- feature_data[, c("ID", "Gene.Symbol")]
+feature_data <- feature_data[, c("ID","Gene.ID","Gene.Symbol")]
 
 combined_data <- merge(ex_df, feature_data, by.x = "row.names", by.y = "ID")
 # Rename the 'Row.names' column to 'ID' in the resulting data frame for clarity
@@ -111,11 +102,13 @@ head(aggregated_data_with_ids)
 
 
 
-fs_data <- aggregated_data_with_ids[, c("ID", "Gene.Symbol")]
+fs_data <- aggregated_data_with_ids[, c("ID", "Gene.Symbol","Gene.ID")]
 row.names(aggregated_data_with_ids) <- aggregated_data_with_ids$Gene.Symbol
 
 aggregated_data_with_ids <- aggregated_data_with_ids %>%
   select(-ID, -Gene.Symbol)
+aggregated_data_with_ids <- aggregated_data_with_ids %>%
+  select(-Gene.ID)
 
 
 
@@ -129,6 +122,8 @@ new_gset <- ExpressionSet(
   phenoData = phenoData(gset),         # Use the 'phenoData' directly if it is already an AnnotatedDataFrame
   featureData = AnnotatedDataFrame(fs_data)  # Replace 'fs_data' with your feature data
 )
+
+
 
 # Inspecting the new ExpressionSet
 
@@ -186,6 +181,29 @@ save(tT2, file = "/home/aiusrdata/RCode/TNBC/results/GSE76250_tT2.RData")
 
 hist(tT2$adj.P.Val, col = "grey", border = "white", xlab = "P-adj",
      ylab = "Number of genes", main = "P-adj value distribution")
+
+
+upregulated_all <- tT2[tT2$logFC >= 1.5 & tT2$adj.P.Val <= 0.01, ]
+downregulated_all <- tT2[tT2$logFC <= -1.5 & tT2$adj.P.Val <= 0.01, ]
+
+dim(upregulated_all);dim(downregulated_all)
+
+p_value_threshold <- 0.01
+tmp1_tT2 <- tT2[abs(tT2$logFC) >= 1 & tT2$adj.P.Val < p_value_threshold, ]
+upregulated_tmp1_tT2 <- tT2[tT2$logFC >= 1 & tT2$adj.P.Val < p_value_threshold, ]
+downregulated_tmp1_tT2 <- tT2[tT2$logFC <= -1 & tT2$adj.P.Val < p_value_threshold, ]
+dim(tmp1_tT2 );dim(upregulated_tmp1_tT2);dim(downregulated_tmp1_tT2 )
+
+kk_temp1 <- enrichKEGG(gene         = as.character(tmp1_tT2 $Gene.ID),
+                       organism     = 'hsa',
+                       pvalueCutoff = 0.05)
+
+
+
+head(kk_temp1@result$Description,10)
+
+
+
 
 # summarize test results as "up", "down" or "not expressed"
 dT <- decideTests(fit2, adjust.method="fdr", p.value=0.05, lfc=0)
