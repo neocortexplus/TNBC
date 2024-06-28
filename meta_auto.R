@@ -3176,14 +3176,47 @@ emt <- read_excel("/home/aiusrdata/RCode/TNBC/emt.xls",col_names = TRUE)
 
 env1 <- new.env()
 env2 <- new.env()
+env3 <- new.env()
+env4 <- new.env()
 
-# Load each dataset into its own environment
 load("/home/aiusrdata/RCode/TNBC/results/GSE76250_tT2.RData", envir = env1)
 load("/home/aiusrdata/RCode/TNBC/results/GSE38959_tT2.RData", envir = env2)
+load("/home/aiusrdata/RCode/TNBC/meta_gpl570.RData", envir = env3)
+load("/home/aiusrdata/RCode/TNBC/meta_gpl6244.RData", envir = env4)
 
-# Access objects via environments
-GSE76250_tT2 <- env1$tT2
-GSE38959_tT2 <- env2$tT2
+process_dataset <- function(env, dataset_name) {
+  tT2 <- env[[dataset_name]]
+  p_value_threshold <- 0.01
+  
+  tmp1_tT2 <- tT2[abs(tT2$logFC) >= 1 & tT2$adj.P.Val < p_value_threshold, ]
+  upregulated_tmp1_tT2 <- tT2[tT2$logFC >= 1 & tT2$adj.P.Val < p_value_threshold, ]
+  downregulated_tmp1_tT2 <- tT2[tT2$logFC <= -1 & tT2$adj.P.Val < p_value_threshold, ]
+  
+  return(list(
+    tmp1 = tmp1_tT2,
+    upregulated = upregulated_tmp1_tT2,
+    downregulated = downregulated_tmp1_tT2
+  ))
+}
+
+results_env1 <- process_dataset(env1, "tT2")
+results_env2 <- process_dataset(env2, "tT2")
+results_env3 <- process_dataset(env3, "tT2")
+results_env4 <- process_dataset(env4, "tT2")
+
+dim(results_env1$tmp1)
+
+dim(results_env2$downregulated)
+
+summary(results_env3$tmp1)  
+
+intersect_genes <- inner_join(results_env1$tmp1, results_env2$tmp1, by = "Gene.ID")
+
+intersect_genes_all <- inner_join(results_env1$tmp1, results_env2$tmp1, by = "Gene.ID") %>%
+  inner_join(results_env3$tmp1, by = "Gene.ID") %>%
+  inner_join(results_env4$tmp1, by = "Gene.ID")
+
+
 
 
 # End Code ###############
