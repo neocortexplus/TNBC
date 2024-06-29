@@ -3273,7 +3273,7 @@ process_dataset <- function(env, dataset_name) {
   tmp1_tT2 <- tT2[abs(tT2$logFC) >= 1.5 & tT2$adj.P.Val < p_value_threshold, ]
   upregulated_tmp1_tT2 <- tT2[tT2$logFC >= 1.5 & tT2$adj.P.Val < p_value_threshold, ]
   downregulated_tmp1_tT2 <- tT2[tT2$logFC <= -1.5 & tT2$adj.P.Val < p_value_threshold, ]
-  dim(tmp1_tT2)
+  cat(dim(tmp1_tT2))
   return(list(
     tmp1 = tmp1_tT2,
     upregulated = upregulated_tmp1_tT2,
@@ -3307,5 +3307,42 @@ kk_temp1 <- enrichKEGG(gene         = as.character(intersect_genes_all$Gene.ID),
                        pvalueCutoff = 0.05)
 
 head(kk_temp1@result$Description,10)
+
+
+# Assuming the gene IDs are in a column named 'Gene.ID'
+gene_ids_env1 <- results_env1$tmp1$Gene.ID
+gene_ids_env2 <- results_env2$tmp1$Gene.ID
+gene_ids_env3 <- results_env3$tmp1$Gene.ID
+gene_ids_env4 <- results_env4$tmp1$Gene.ID
+
+# Corrected code to draw a Venn diagram for four groups
+venn.plot <- draw.quad.venn(
+  area1 = length(gene_ids_env1),
+  area2 = length(gene_ids_env2),
+  area3 = length(gene_ids_env3),
+  area4 = length(gene_ids_env4),
+  n12 = length(intersect(gene_ids_env1, gene_ids_env2)),
+  n13 = length(intersect(gene_ids_env1, gene_ids_env3)),
+  n14 = length(intersect(gene_ids_env1, gene_ids_env4)),
+  n23 = length(intersect(gene_ids_env2, gene_ids_env3)),
+  n24 = length(intersect(gene_ids_env2, gene_ids_env4)),
+  n34 = length(intersect(gene_ids_env3, gene_ids_env4)),
+  n123 = length(Reduce(intersect, list(gene_ids_env1, gene_ids_env2, gene_ids_env3))),
+  n124 = length(Reduce(intersect, list(gene_ids_env1, gene_ids_env2, gene_ids_env4))),
+  n134 = length(Reduce(intersect, list(gene_ids_env1, gene_ids_env3, gene_ids_env4))),
+  n234 = length(Reduce(intersect, list(gene_ids_env2, gene_ids_env3, gene_ids_env4))),
+  n1234 = length(intersect(intersect(intersect(gene_ids_env1, gene_ids_env2), gene_ids_env3), gene_ids_env4)),
+  category = c("GSE76250", "GSE38959", "GPL570", "GPL622"),
+  fill = c("skyblue", "pink1", "mediumorchid", "orange"),
+  label.col = "black",
+  cex = 2,
+  cat.cex = 2,
+  cat.col = c("darkblue", "darkred", "darkgreen", "darkorange")
+)
+
+# Draw the Venn diagram
+grid.draw(venn.plot)
+
+
 
 # End Code ###############
