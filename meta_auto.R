@@ -1905,64 +1905,71 @@ legend("topright", inset=c(1.02,-0.05), legend=batch_labels, fill=colors, bty="c
 dev.off()
 
 
-
 #####################################
-# umap plot part
+#pca and umap
 
 datasets <- list(allq = allq, allc = allc, all_expressions = all_expressions)
-
-# Titles for each dataset based on the stage of processing
 titles <- list(
   allq = "After Combat and Quantile Normalization",
   allc = "After Combat",
   all_expressions = "Before Batch Effect Removal"
 )
-
-# Define the base path where plots will be saved
 base_path <- "/home/aiusrdata/RCode/TNBC/plots"
 
-# Ensure the directory exists
 if (!dir.exists(base_path)) {
   dir.create(base_path, recursive = TRUE)
 }
 
-# Loop through each dataset
-for (dataset_name in names(datasets)) {
-  # Retrieve the dataset from the list
-  data <- datasets[[dataset_name]]
+perform_analysis <- function(data, dataset_name) {
+  # Perform PCA
+  pca_res <- prcomp(t(data), scale. = TRUE)
+  pca_df <- as.data.frame(pca_res$x[, 1:2])
+  colnames(pca_df) <- c("PC1", "PC2")
+  pca_df$batch <- batch
   
   # Perform UMAP
-  ump <- umap(t(data), n_neighbors = 15, random_state = 123)
-  
-  # Create a dataframe from UMAP layout
-  umap_df <- as.data.frame(ump$layout)
+  umap_res <- umap(t(data), n_neighbors = 15, random_state = 123)
+  umap_df <- as.data.frame(umap_res$layout)
   colnames(umap_df) <- c("UMAP1", "UMAP2")
   umap_df$batch <- batch
   
-  # Generate the plot with a white background and specific title
-  umap_plot <- ggplot(umap_df, aes(x = UMAP1, y = UMAP2, shape = batch,color=group_info$Group)) +
-    geom_point(size = 2) +
-    theme_minimal(base_size = 12) +  # Adjusted for general text size
+  # Theme for white background and publication quality
+  publication_theme <- theme_minimal() +
     theme(
-      plot.background = element_rect(fill = "white", color = NA), # Ensure background is white
+      plot.background = element_rect(fill = "white", color = NA),
       panel.background = element_rect(fill = "white", color = NA),
-      plot.title = element_text(hjust = 0.5),
-      axis.title = element_text(size = 14),
-      axis.text = element_text(size = 12),
-      legend.title = element_text(size = 12),
-      legend.text = element_text(size = 10)
-    ) +
-    labs(title = titles[[dataset_name]], x = "UMAP1", y = "UMAP2") +
+      panel.border = element_rect(color = "black", fill = NA),
+      panel.grid.major = element_blank(),
+      panel.grid.minor = element_blank(),
+      legend.background = element_rect(fill = "white", color = NA),
+      plot.title = element_text(hjust = 0.5, color = "black")
+    )
+  
+  # Plot PCA
+  pca_plot <- ggplot(pca_df, aes(x = PC1, y = PC2, shape = batch, color = group_info$Group)) +
+    geom_point(size = 2) +
+    publication_theme +
+    labs(title = paste("PCA -", titles[[dataset_name]]), x = "PC1", y = "PC2") +
     scale_color_discrete(name = "Batch")
+  ggsave(sprintf("%s/GPL_570_%s_PCA.png", base_path, dataset_name), plot = pca_plot, width = 10, height = 8, dpi = 300)
   
-  # Define the filename
-  filename <- sprintf("%s/GPL_570_%s.png", base_path, dataset_name)
-  
-  # Save the plot in high quality
-  ggsave(filename, plot = umap_plot, width = 10, height = 8, dpi = res)  # dpi set to 300 for high resolution
+  # Plot UMAP
+  umap_plot <- ggplot(umap_df, aes(x = UMAP1, y = UMAP2, shape = batch, color = group_info$Group)) +
+    geom_point(size = 2) +
+    publication_theme +
+    labs(title = paste("UMAP -", titles[[dataset_name]]), x = "UMAP1", y = "UMAP2") +
+    scale_color_discrete(name = "Batch")
+  ggsave(sprintf("%s/GPL_570_%s_UMAP.png", base_path, dataset_name), plot = umap_plot, width = 10, height = 8, dpi = 300)
 }
 
+for (dataset_name in names(datasets)) {
+  perform_analysis(datasets[[dataset_name]], dataset_name)
+}
+
+
 #####################################
+
+
 
 
 # Create ExpressionSet
@@ -2072,17 +2079,18 @@ tT2 <- topTable(fit2, adjust="fdr", sort.by="B", number=Inf)
 
 save(tT2, file = "/home/aiusrdata/RCode/TNBC/meta_tT2_gpl570.RData")
 
+load("/home/aiusrdata/RCode/TNBC/meta_tT2_gpl570.RData")
 
 
-upregulated_all <- tT2[tT2$logFC >= 2 & tT2$adj.P.Val <= 0.01, ]
-downregulated_all <- tT2[tT2$logFC <= -2 & tT2$adj.P.Val <= 0.01, ]
+upregulated_all <- tT2[tT2$logFC >= 1.5 & tT2$adj.P.Val <= 0.01, ]
+downregulated_all <- tT2[tT2$logFC <= -1.5 & tT2$adj.P.Val <= 0.01, ]
 
 dim(upregulated_all);dim(downregulated_all)
 
 p_value_threshold <- 0.01
-tmp1_tT2 <- tT2[abs(tT2$logFC) >= 2 & tT2$adj.P.Val < p_value_threshold, ]
-upregulated_tmp1_tT2 <- tT2[tT2$logFC >= 2 & tT2$adj.P.Val < p_value_threshold, ]
-downregulated_tmp1_tT2 <- tT2[tT2$logFC <= -2 & tT2$adj.P.Val < p_value_threshold, ]
+tmp1_tT2 <- tT2[abs(tT2$logFC) >= 1.5 & tT2$adj.P.Val < p_value_threshold, ]
+upregulated_tmp1_tT2 <- tT2[tT2$logFC >= 1.5 & tT2$adj.P.Val < p_value_threshold, ]
+downregulated_tmp1_tT2 <- tT2[tT2$logFC <= -1.5 & tT2$adj.P.Val < p_value_threshold, ]
 dim(tmp1_tT2 );dim(upregulated_tmp1_tT2);dim(downregulated_tmp1_tT2 )
 
 kk_temp1 <- enrichKEGG(gene         = as.character(tmp1_tT2 $Gene.ID),
@@ -2093,11 +2101,45 @@ kk_temp1 <- enrichKEGG(gene         = as.character(tmp1_tT2 $Gene.ID),
 
 head(kk_temp1@result$Description,10)
 
-hist(tT2$adj.P.Val, col = "grey", border = "white", xlab = "P-adj",
-     ylab = "Number of genes", main = "P-adj value distribution")
 
-# summarize test results as "up", "down" or "not expressed"
-dT <- decideTests(fit2, adjust.method="fdr", p.value=0.05, lfc=0)
+
+#############################################
+
+hist_data <- hist(tT2$adj.P.Val, plot = FALSE)
+
+colors <- ifelse(hist_data$breaks[-length(hist_data$breaks)] <= 0.01, "green", "grey")
+
+plot(hist_data, col = colors, border = "white", xlab = "P-adj",
+     ylab = "Number of genes", main = "P-adjusted Value Distribution")
+
+legend("topright", legend = c("p-adjust <= 0.01", "p-adjust > 0.01"), 
+       fill = c("green", "grey"), title = "Legend", cex = 0.8, bty = "n")
+
+
+range_logFC <- range(tT2$logFC, na.rm = TRUE)  # Remove NA values if any
+bin_width <- 0.1  # Define the bin width
+
+breaks <- seq(from = floor(range_logFC[1] / bin_width) * bin_width,
+              to = ceiling(range_logFC[2] / bin_width) * bin_width,
+              by = bin_width)
+
+max_count <- max(hist(tT2$logFC, plot = FALSE, breaks = breaks)$counts)
+
+tT2$color <- ifelse(tT2$logFC >= 1.5, "red", ifelse(tT2$logFC <= -1.5, "blue", "grey"))
+ggplot(tT2, aes(x = logFC, fill = color)) +
+  geom_histogram(binwidth = 0.1, color = "white") +  # Adjust binwidth as needed
+  scale_fill_identity() +
+  geom_vline(xintercept = c(1.5, -1.5), color = c("red", "blue"), linetype = "dashed", linewidth = 1) +
+  scale_y_continuous(limits = c(0, max_count * 1.2)) +  # Adjust y limits to provide space for text
+  geom_text(aes(label = paste("n =", sum(logFC >= 1.5)), y = max_count * 1.1, x = 1.75), color = "red", vjust = 0, hjust = 0) +
+  geom_text(aes(label = paste("n =", sum(logFC <= -1.5)), y = max_count * 1.1, x = -1.75), color = "blue", vjust = 0, hjust = 1) +
+  labs(x = "Log Fold Change", y = "Number of Genes", title = "Log Fold Change Distribution") +
+  theme_minimal()
+
+#############################################
+
+
+dT <- decideTests(fit2, adjust.method="fdr", p.value=0.05, lfc=1.5)
 
 # Venn diagram of results
 vennDiagram(dT, circle.col=palette())
@@ -2109,11 +2151,8 @@ qqt(fit2$t[t.good], fit2$df.total[t.good], main="Moderated t statistic")
 # volcano plot (log P-value vs log fold change)
 colnames(fit2) # list contrast names
 ct <- 1        # choose contrast of interest
-# Please note that the code provided to generate graphs serves as a guidance to
-# the users. It does not replicate the exact GEO2R web display due to multitude
-# of graphical options.
-# 
-# The following will produce basic volcano plot using limma function:
+
+
 volcanoplot(fit2, coef=ct, main=colnames(fit2)[ct], pch=20,
             highlight=length(which(dT[,ct]!=0)), names=rep('+', nrow(fit2)))
 
@@ -2370,61 +2409,65 @@ dev.off()
 
 
 #####################################
-# umap plot part
+#pca and umap
 
 datasets <- list(allq = allq, allc = allc, all_expressions = all_expressions)
-
-# Titles for each dataset based on the stage of processing
 titles <- list(
   allq = "After Combat and Quantile Normalization",
   allc = "After Combat",
   all_expressions = "Before Batch Effect Removal"
 )
-
-# Define the base path where plots will be saved
 base_path <- "/home/aiusrdata/RCode/TNBC/plots"
 
-# Ensure the directory exists
 if (!dir.exists(base_path)) {
   dir.create(base_path, recursive = TRUE)
 }
 
-# Loop through each dataset
-for (dataset_name in names(datasets)) {
-  # Retrieve the dataset from the list
-  data <- datasets[[dataset_name]]
+perform_analysis <- function(data, dataset_name) {
+  # Perform PCA
+  pca_res <- prcomp(t(data), scale. = TRUE)
+  pca_df <- as.data.frame(pca_res$x[, 1:2])
+  colnames(pca_df) <- c("PC1", "PC2")
+  pca_df$batch <- batch
   
   # Perform UMAP
-  ump <- umap(t(data), n_neighbors = 15, random_state = 123)
-  
-  # Create a dataframe from UMAP layout
-  umap_df <- as.data.frame(ump$layout)
+  umap_res <- umap(t(data), n_neighbors = 15, random_state = 123)
+  umap_df <- as.data.frame(umap_res$layout)
   colnames(umap_df) <- c("UMAP1", "UMAP2")
   umap_df$batch <- batch
   
-  # Generate the plot with a white background and specific title
-  umap_plot <- ggplot(umap_df, aes(x = UMAP1, y = UMAP2, shape = batch,color=group_info$Group)) +
-    geom_point(size = 2) +
-    theme_minimal(base_size = 12) +  # Adjusted for general text size
+  # Theme for white background and publication quality
+  publication_theme <- theme_minimal() +
     theme(
-      plot.background = element_rect(fill = "white", color = NA), # Ensure background is white
+      plot.background = element_rect(fill = "white", color = NA),
       panel.background = element_rect(fill = "white", color = NA),
-      plot.title = element_text(hjust = 0.5),
-      axis.title = element_text(size = 14),
-      axis.text = element_text(size = 12),
-      legend.title = element_text(size = 12),
-      legend.text = element_text(size = 10)
-    ) +
-    labs(title = titles[[dataset_name]], x = "UMAP1", y = "UMAP2") +
+      panel.border = element_rect(color = "black", fill = NA),
+      panel.grid.major = element_blank(),
+      panel.grid.minor = element_blank(),
+      legend.background = element_rect(fill = "white", color = NA),
+      plot.title = element_text(hjust = 0.5, color = "black")
+    )
+  
+  # Plot PCA
+  pca_plot <- ggplot(pca_df, aes(x = PC1, y = PC2, shape = batch, color = group_info$Group)) +
+    geom_point(size = 2) +
+    publication_theme +
+    labs(title = paste("PCA -", titles[[dataset_name]]), x = "PC1", y = "PC2") +
     scale_color_discrete(name = "Batch")
+  ggsave(sprintf("%s/GPL_6244_%s_PCA.png", base_path, dataset_name), plot = pca_plot, width = 10, height = 8, dpi = 300)
   
-  # Define the filename
-  filename <- sprintf("%s/GPL_6244_%s.png", base_path, dataset_name)
-  
-  # Save the plot in high quality
-  ggsave(filename, plot = umap_plot, width = 10, height = 8, dpi = res)  # dpi set to 300 for high resolution
+  # Plot UMAP
+  umap_plot <- ggplot(umap_df, aes(x = UMAP1, y = UMAP2, shape = batch, color = group_info$Group)) +
+    geom_point(size = 2) +
+    publication_theme +
+    labs(title = paste("UMAP -", titles[[dataset_name]]), x = "UMAP1", y = "UMAP2") +
+    scale_color_discrete(name = "Batch")
+  ggsave(sprintf("%s/GPL_6244_%s_UMAP.png", base_path, dataset_name), plot = umap_plot, width = 10, height = 8, dpi = 300)
 }
 
+for (dataset_name in names(datasets)) {
+  perform_analysis(datasets[[dataset_name]], dataset_name)
+}
 #####################################
 
 
@@ -2540,15 +2583,15 @@ save(tT2, file = "/home/aiusrdata/RCode/TNBC/meta_tT2_meta_gpl6244.RData")
 
 
 
-upregulated_all <- tT2[tT2$logFC >= 1 & tT2$adj.P.Val <+ 0.01, ]
-downregulated_all <- tT2[tT2$logFC <= -1 & tT2$adj.P.Val <+ 0.01, ]
+upregulated_all <- tT2[tT2$logFC >= 1.5 & tT2$adj.P.Val <+ 0.01, ]
+downregulated_all <- tT2[tT2$logFC <= -1.5 & tT2$adj.P.Val <+ 0.01, ]
 
 dim(upregulated_all);dim(downregulated_all)
 
 p_value_threshold <- 0.01
-tmp1_tT2 <- tT2[abs(tT2$logFC) >= 1 & tT2$adj.P.Val < p_value_threshold, ]
-upregulated_tmp1_tT2 <- tT2[tT2$logFC >= 1 & tT2$adj.P.Val < p_value_threshold, ]
-downregulated_tmp1_tT2 <- tT2[tT2$logFC <= -1 & tT2$adj.P.Val < p_value_threshold, ]
+tmp1_tT2 <- tT2[abs(tT2$logFC) >= 1.5 & tT2$adj.P.Val < p_value_threshold, ]
+upregulated_tmp1_tT2 <- tT2[tT2$logFC >= 1.5 & tT2$adj.P.Val < p_value_threshold, ]
+downregulated_tmp1_tT2 <- tT2[tT2$logFC <= -1.5 & tT2$adj.P.Val < p_value_threshold, ]
 dim(tmp1_tT2 );dim(upregulated_tmp1_tT2);dim(downregulated_tmp1_tT2 )
 
 kk_temp1 <- enrichKEGG(gene         = as.character(tmp1_tT2 $Gene.ID),
@@ -2576,7 +2619,46 @@ gseKEGG(geneList     = sorted_gene_vector1,
         pvalueCutoff = 0.05,
         verbose      = FALSE)
 
-###
+#############################################
+
+hist_data <- hist(tT2$adj.P.Val, plot = FALSE)
+
+colors <- ifelse(hist_data$breaks[-length(hist_data$breaks)] <= 0.01, "green", "grey")
+
+plot(hist_data, col = colors, border = "white", xlab = "P-adj",
+     ylab = "Number of genes", main = "P-adjusted Value Distribution")
+
+legend("topright", legend = c("p-adjust <= 0.01", "p-adjust > 0.01"), 
+       fill = c("green", "grey"), title = "Legend", cex = 0.8, bty = "n")
+
+
+range_logFC <- range(tT2$logFC, na.rm = TRUE)  # Remove NA values if any
+bin_width <- 0.1  # Define the bin width
+
+breaks <- seq(from = floor(range_logFC[1] / bin_width) * bin_width,
+              to = ceiling(range_logFC[2] / bin_width) * bin_width,
+              by = bin_width)
+
+max_count <- max(hist(tT2$logFC, plot = FALSE, breaks = breaks)$counts)
+
+tT2$color <- ifelse(tT2$logFC >= 1.5, "red", ifelse(tT2$logFC <= -1.5, "blue", "grey"))
+ggplot(tT2, aes(x = logFC, fill = color)) +
+  geom_histogram(binwidth = 0.1, color = "white") +  # Adjust binwidth as needed
+  scale_fill_identity() +
+  geom_vline(xintercept = c(1.5, -1.5), color = c("red", "blue"), linetype = "dashed", linewidth = 1) +
+  scale_y_continuous(limits = c(0, max_count * 1.2)) +  # Adjust y limits to provide space for text
+  geom_text(aes(label = paste("n =", sum(logFC >= 1.5)), y = max_count * 1.1, x = 1.75), color = "red", vjust = 0, hjust = 0) +
+  geom_text(aes(label = paste("n =", sum(logFC <= -1.5)), y = max_count * 1.1, x = -1.75), color = "blue", vjust = 0, hjust = 1) +
+  labs(x = "Log Fold Change", y = "Number of Genes", title = "Log Fold Change Distribution") +
+  theme_minimal()
+
+#############################################
+
+
+
+
+
+
 
 hist(tT2$adj.P.Val, col = "grey", border = "white", xlab = "P-adj",
      ylab = "Number of genes", main = "P-adj value distribution")
@@ -3181,17 +3263,17 @@ env4 <- new.env()
 
 load("/home/aiusrdata/RCode/TNBC/results/GSE76250_tT2.RData", envir = env1)
 load("/home/aiusrdata/RCode/TNBC/results/GSE38959_tT2.RData", envir = env2)
-load("/home/aiusrdata/RCode/TNBC/meta_gpl570.RData", envir = env3)
-load("/home/aiusrdata/RCode/TNBC/meta_gpl6244.RData", envir = env4)
-
+load("/home/aiusrdata/RCode/TNBC/meta_tT2_gpl570.RData", envir = env3)
+load("/home/aiusrdata/RCode/TNBC/meta_tT2_meta_gpl6244.RData", envir = env4)
+                                 
 process_dataset <- function(env, dataset_name) {
   tT2 <- env[[dataset_name]]
   p_value_threshold <- 0.01
   
-  tmp1_tT2 <- tT2[abs(tT2$logFC) >= 1 & tT2$adj.P.Val < p_value_threshold, ]
-  upregulated_tmp1_tT2 <- tT2[tT2$logFC >= 1 & tT2$adj.P.Val < p_value_threshold, ]
-  downregulated_tmp1_tT2 <- tT2[tT2$logFC <= -1 & tT2$adj.P.Val < p_value_threshold, ]
-  
+  tmp1_tT2 <- tT2[abs(tT2$logFC) >= 1.5 & tT2$adj.P.Val < p_value_threshold, ]
+  upregulated_tmp1_tT2 <- tT2[tT2$logFC >= 1.5 & tT2$adj.P.Val < p_value_threshold, ]
+  downregulated_tmp1_tT2 <- tT2[tT2$logFC <= -1.5 & tT2$adj.P.Val < p_value_threshold, ]
+  dim(tmp1_tT2)
   return(list(
     tmp1 = tmp1_tT2,
     upregulated = upregulated_tmp1_tT2,
@@ -3205,18 +3287,25 @@ results_env3 <- process_dataset(env3, "tT2")
 results_env4 <- process_dataset(env4, "tT2")
 
 dim(results_env1$tmp1)
+dim(results_env2$tmp1)
+dim(results_env3$tmp1)
+dim(results_env4$tmp1)
 
-dim(results_env2$downregulated)
-
-summary(results_env3$tmp1)  
 
 intersect_genes <- inner_join(results_env1$tmp1, results_env2$tmp1, by = "Gene.ID")
+length(intersect_genes)
+
 
 intersect_genes_all <- inner_join(results_env1$tmp1, results_env2$tmp1, by = "Gene.ID") %>%
   inner_join(results_env3$tmp1, by = "Gene.ID") %>%
   inner_join(results_env4$tmp1, by = "Gene.ID")
 
+length(intersect_genes_all)
 
+kk_temp1 <- enrichKEGG(gene         = as.character(intersect_genes_all$Gene.ID),
+                       organism     = 'hsa',
+                       pvalueCutoff = 0.05)
 
+head(kk_temp1@result$Description,10)
 
 # End Code ###############
