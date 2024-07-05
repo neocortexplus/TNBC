@@ -2022,6 +2022,112 @@ dim(ex)
 # 
 # sml <- strsplit(gsms, split="")[[1]]
 # 
+
+###############################################
+#Find and Remove Outlier 
+
+datExpr <- t(ex)
+dim(datExpr)
+
+sampleTree = hclust(dist(datExpr), method = "average");
+
+# Load required packages
+library(WGCNA)
+
+# Define a function to adjust cex based on the number of samples
+adjust_cex <- function(n_samples) {
+  if (n_samples > 500) {
+    return(0.3)
+  } else if (n_samples > 100) {
+    return(0.5)
+  } else {
+    return(0.7)
+  }
+}
+
+# Assuming datExpr, sampleTree, and gset are already defined
+
+# Calculate appropriate cex for the given number of samples
+cex_value <- adjust_cex(nrow(datExpr))
+
+# Plot the initial dendrogram and save as PDF
+pdf("/home/aiusrdata/git_projects/bioinformatics/GPL570_initial_sample_outliers_tree.pdf", width = 8, height = 6)
+par(cex = cex_value)  # Adjust text size based on sample size
+par(mar = c(5, 4, 4, 2) + 0.1)  # Adjust margins
+plot(sampleTree, main = "Sample Clustering to Detect Outliers",
+     sub = "", xlab = "", ylab = "Height",
+     cex.lab = cex_value, cex.axis = cex_value, cex.main = cex_value,
+     cex = cex_value)  # Adjust text size
+abline(h = 90, col = "red", lwd = 2)  # Add a horizontal line
+dev.off()
+
+# Cut the tree to identify clusters with a cut height of 120
+clust = cutreeStatic(sampleTree, cutHeight = 120, minSize = 10)
+table(clust)
+
+# Identify outliers (samples assigned to cluster 0)
+outliers = which(clust == 0)
+outlier_samples = rownames(datExpr)[outliers]
+
+# Replace outliers in sml with "X"
+sml[outliers] <- "X"
+
+# Print the modified sml to verify
+print(sml)
+
+# Remove outliers from the dataset
+datExpr_clean = datExpr[-outliers, ]
+
+# Re-cluster the samples without outliers
+sampleTree_clean = hclust(dist(datExpr_clean), method = "average")
+
+# Calculate appropriate cex for the cleaned dataset
+cex_value_clean <- adjust_cex(nrow(datExpr_clean))
+
+# Plot the cleaned dendrogram and save as PDF
+pdf("/home/aiusrdata/git_projects/bioinformatics/GPL570_cleaned_sample_outliers_tree.pdf", width = 8, height = 6)
+par(cex = cex_value_clean)  # Adjust text size based on sample size
+par(mar = c(5, 4, 4, 2) + 0.1)  # Adjust margins
+plot(sampleTree_clean, main = "Sample Clustering After Removing Outliers",
+     sub = "", xlab = "", ylab = "Height",
+     cex.lab = cex_value_clean, cex.axis = cex_value_clean, cex.main = cex_value_clean,
+     cex = cex_value_clean)  # Adjust text size
+abline(h = 90, col = "red", lwd = 2)  # Add a horizontal line
+dev.off()
+
+# Cut the tree to identify clusters with a cut height of 120 for the cleaned data
+clust_clean = cutreeStatic(sampleTree_clean, cutHeight = 120, minSize = 80)
+table(clust_clean)
+
+# Identify outliers (samples assigned to cluster 0) in the cleaned data
+outliers_clean = which(clust_clean == 0)
+outlier_samples_clean = rownames(datExpr_clean)[outliers_clean]
+outlier_samples_clean
+
+# Remove columns corresponding to outlier samples from the `ex` dataframe
+ex_clean <- ex[, !colnames(ex) %in% outlier_samples]
+
+# Print the first few rows of the cleaned dataframe to verify
+head(ex_clean)
+
+# Remove "X" values from sml
+sml <- sml[sml != "X"]
+
+# Print the modified sml to verify
+print(sml)
+
+# Remove columns corresponding to outlier samples from the `gset` dataset
+gset_clean <- gset[, !colnames(gset) %in% outlier_samples]
+
+# Print the first few rows of the cleaned gset to verify
+head(gset_clean)
+
+ex <- ex_clean
+dim(ex)
+gset<-gset_clean
+###############################################
+
+
 sml
 
 # log2 transformation
@@ -2524,6 +2630,112 @@ dim(ex)
 # 
 # sml <- strsplit(gsms, split="")[[1]]
 # 
+
+###############################################
+#Find and Remove Outlier 
+
+datExpr <- t(ex)
+dim(datExpr)
+
+sampleTree = hclust(dist(datExpr), method = "average");
+
+# Load required packages
+library(WGCNA)
+
+# Define a function to adjust cex based on the number of samples
+adjust_cex <- function(n_samples) {
+  if (n_samples > 500) {
+    return(0.3)
+  } else if (n_samples > 100) {
+    return(0.5)
+  } else {
+    return(0.7)
+  }
+}
+
+# Assuming datExpr, sampleTree, and gset are already defined
+
+# Calculate appropriate cex for the given number of samples
+cex_value <- adjust_cex(nrow(datExpr))
+
+# Plot the initial dendrogram and save as PDF
+pdf("/home/aiusrdata/git_projects/bioinformatics/GPL6244_initial_sample_outliers_tree.pdf", width = 8, height = 6)
+par(cex = cex_value)  # Adjust text size based on sample size
+par(mar = c(5, 4, 4, 2) + 0.1)  # Adjust margins
+plot(sampleTree, main = "Sample Clustering to Detect Outliers",
+     sub = "", xlab = "", ylab = "Height",
+     cex.lab = cex_value, cex.axis = cex_value, cex.main = cex_value,
+     cex = cex_value)  # Adjust text size
+abline(h = 90, col = "red", lwd = 2)  # Add a horizontal line
+dev.off()
+
+# Cut the tree to identify clusters with a cut height of 120
+clust = cutreeStatic(sampleTree, cutHeight = 120, minSize = 10)
+table(clust)
+
+# Identify outliers (samples assigned to cluster 0)
+outliers = which(clust == 0)
+outlier_samples = rownames(datExpr)[outliers]
+
+# Replace outliers in sml with "X"
+sml[outliers] <- "X"
+
+# Print the modified sml to verify
+print(sml)
+
+# Remove outliers from the dataset
+datExpr_clean = datExpr[-outliers, ]
+
+# Re-cluster the samples without outliers
+sampleTree_clean = hclust(dist(datExpr_clean), method = "average")
+
+# Calculate appropriate cex for the cleaned dataset
+cex_value_clean <- adjust_cex(nrow(datExpr_clean))
+
+# Plot the cleaned dendrogram and save as PDF
+pdf("/home/aiusrdata/git_projects/bioinformatics/GPL6244_cleaned_sample_outliers_tree.pdf", width = 8, height = 6)
+par(cex = cex_value_clean)  # Adjust text size based on sample size
+par(mar = c(5, 4, 4, 2) + 0.1)  # Adjust margins
+plot(sampleTree_clean, main = "Sample Clustering After Removing Outliers",
+     sub = "", xlab = "", ylab = "Height",
+     cex.lab = cex_value_clean, cex.axis = cex_value_clean, cex.main = cex_value_clean,
+     cex = cex_value_clean)  # Adjust text size
+abline(h = 90, col = "red", lwd = 2)  # Add a horizontal line
+dev.off()
+
+# Cut the tree to identify clusters with a cut height of 120 for the cleaned data
+clust_clean = cutreeStatic(sampleTree_clean, cutHeight = 120, minSize = 80)
+table(clust_clean)
+
+# Identify outliers (samples assigned to cluster 0) in the cleaned data
+outliers_clean = which(clust_clean == 0)
+outlier_samples_clean = rownames(datExpr_clean)[outliers_clean]
+outlier_samples_clean
+
+# Remove columns corresponding to outlier samples from the `ex` dataframe
+ex_clean <- ex[, !colnames(ex) %in% outlier_samples]
+
+# Print the first few rows of the cleaned dataframe to verify
+head(ex_clean)
+
+# Remove "X" values from sml
+sml <- sml[sml != "X"]
+
+# Print the modified sml to verify
+print(sml)
+
+# Remove columns corresponding to outlier samples from the `gset` dataset
+gset_clean <- gset[, !colnames(gset) %in% outlier_samples]
+
+# Print the first few rows of the cleaned gset to verify
+head(gset_clean)
+
+ex <- ex_clean
+dim(ex)
+gset<-gset_clean
+###############################################
+
+
 sml
 
 # log2 transformation
@@ -2799,7 +3011,6 @@ gsms <- paste0(gsms_list, collapse = "")
 sml <- strsplit(gsms, split="")[[1]]
 
 
-
 # Load datasets
 datasets <- lapply(dataset_files, function(file) {
   load(file)
@@ -2963,61 +3174,66 @@ dev.off()
 
 
 #####################################
-# umap plot part
+#pca and umap
 
 datasets <- list(allq = allq, allc = allc, all_expressions = all_expressions)
-
-# Titles for each dataset based on the stage of processing
 titles <- list(
   allq = "After Combat and Quantile Normalization",
   allc = "After Combat",
   all_expressions = "Before Batch Effect Removal"
 )
-
-# Define the base path where plots will be saved
 base_path <- "/home/aiusrdata/RCode/TNBC/plots"
 
-# Ensure the directory exists
 if (!dir.exists(base_path)) {
   dir.create(base_path, recursive = TRUE)
 }
 
-# Loop through each dataset
-for (dataset_name in names(datasets)) {
-  # Retrieve the dataset from the list
-  data <- datasets[[dataset_name]]
-  shape_set <- c(16, 17, 18, 19, 20, 21, 22, 23)
-  # Perform UMAP
-  ump <- umap(t(data), n_neighbors = 15, random_state = 123)
+perform_analysis <- function(data, dataset_name) {
+  # Perform PCA
+  pca_res <- prcomp(t(data), scale. = TRUE)
+  pca_df <- as.data.frame(pca_res$x[, 1:2])
+  colnames(pca_df) <- c("PC1", "PC2")
+  pca_df$batch <- batch
   
-  # Create a dataframe from UMAP layout
-  umap_df <- as.data.frame(ump$layout)
+  # Perform UMAP
+  umap_res <- umap(t(data), n_neighbors = 15, random_state = 123)
+  umap_df <- as.data.frame(umap_res$layout)
   colnames(umap_df) <- c("UMAP1", "UMAP2")
   umap_df$batch <- batch
   
-  # Generate the plot with a white background and specific title
-  umap_plot <- ggplot(umap_df, aes(x = UMAP1, y = UMAP2, shape = batch,color=group_info$Group)) +
-    geom_point(size = 2) +
-    theme_minimal(base_size = 12) +  # Adjusted for general text size
-    scale_shape_manual(values = shape_set) +
+  # Theme for white background and publication quality
+  publication_theme <- theme_minimal() +
     theme(
-      plot.background = element_rect(fill = "white", color = NA), # Ensure background is white
+      plot.background = element_rect(fill = "white", color = NA),
       panel.background = element_rect(fill = "white", color = NA),
-      plot.title = element_text(hjust = 0.5),
-      axis.title = element_text(size = 14),
-      axis.text = element_text(size = 12),
-      legend.title = element_text(size = 12),
-      legend.text = element_text(size = 10)
-    ) +
-    labs(title = titles[[dataset_name]], x = "UMAP1", y = "UMAP2") +
+      panel.border = element_rect(color = "black", fill = NA),
+      panel.grid.major = element_blank(),
+      panel.grid.minor = element_blank(),
+      legend.background = element_rect(fill = "white", color = NA),
+      plot.title = element_text(hjust = 0.5, color = "black")
+    )
+  
+  # Plot PCA
+  pca_plot <- ggplot(pca_df, aes(x = PC1, y = PC2, shape = batch, color = group_info$Group)) +
+    geom_point(size = 2) +
+    publication_theme +
+    labs(title = paste("PCA -", titles[[dataset_name]]), x = "PC1", y = "PC2") +
     scale_color_discrete(name = "Batch")
+  ggsave(sprintf("%s/All_Datasets_%s_PCA.png", base_path, dataset_name), plot = pca_plot, width = 10, height = 8, dpi = 300)
   
-  # Define the filename
-  filename <- sprintf("%s/All_Datasets_%s.png", base_path, dataset_name)
-  
-  # Save the plot in high quality
-  ggsave(filename, plot = umap_plot, width = 10, height = 8, dpi = res)  # dpi set to 300 for high resolution
+  # Plot UMAP
+  umap_plot <- ggplot(umap_df, aes(x = UMAP1, y = UMAP2, shape = batch, color = group_info$Group)) +
+    geom_point(size = 2) +
+    publication_theme +
+    labs(title = paste("UMAP -", titles[[dataset_name]]), x = "UMAP1", y = "UMAP2") +
+    scale_color_discrete(name = "Batch")
+  ggsave(sprintf("%s/All_Datasets_%s_UMAP.png", base_path, dataset_name), plot = umap_plot, width = 10, height = 8, dpi = 300)
 }
+
+for (dataset_name in names(datasets)) {
+  perform_analysis(datasets[[dataset_name]], dataset_name)
+}
+
 
 #####################################
 
@@ -3087,6 +3303,116 @@ ex <- exprs(gset)
 max(ex)
 min(ex)
 
+###############################################
+#Find and Remove Outlier 
+
+datExpr <- t(ex)
+dim(datExpr)
+
+sampleTree = hclust(dist(datExpr), method = "average");
+
+# Load required packages
+library(WGCNA)
+
+# Define a function to adjust cex based on the number of samples
+adjust_cex <- function(n_samples) {
+  if (n_samples > 500) {
+    return(0.3)
+  } else if (n_samples > 100) {
+    return(0.5)
+  } else {
+    return(0.7)
+  }
+}
+
+# Assuming datExpr, sampleTree, and gset are already defined
+
+# Calculate appropriate cex for the given number of samples
+cex_value <- adjust_cex(nrow(datExpr))
+
+# Plot the initial dendrogram and save as PDF
+pdf("/home/aiusrdata/git_projects/bioinformatics/initial_sample_outliers_tree.pdf", width = 8, height = 6)
+par(cex = cex_value)  # Adjust text size based on sample size
+par(mar = c(5, 4, 4, 2) + 0.1)  # Adjust margins
+plot(sampleTree, main = "Sample Clustering to Detect Outliers",
+     sub = "", xlab = "", ylab = "Height",
+     cex.lab = cex_value, cex.axis = cex_value, cex.main = cex_value,
+     cex = cex_value)  # Adjust text size
+abline(h = 90, col = "red", lwd = 2)  # Add a horizontal line
+dev.off()
+
+# Cut the tree to identify clusters with a cut height of 120
+clust = cutreeStatic(sampleTree, cutHeight = 120, minSize = 10)
+table(clust)
+
+# Identify outliers (samples assigned to cluster 0)
+outliers = which(clust == 0)
+outlier_samples = rownames(datExpr)[outliers]
+
+# Replace outliers in sml with "X"
+sml[outliers] <- "X"
+
+# Print the modified sml to verify
+print(sml)
+
+# Remove outliers from the dataset
+datExpr_clean = datExpr[-outliers, ]
+
+# Re-cluster the samples without outliers
+sampleTree_clean = hclust(dist(datExpr_clean), method = "average")
+
+# Calculate appropriate cex for the cleaned dataset
+cex_value_clean <- adjust_cex(nrow(datExpr_clean))
+
+# Plot the cleaned dendrogram and save as PDF
+pdf("/home/aiusrdata/git_projects/bioinformatics/cleaned_sample_outliers_tree.pdf", width = 8, height = 6)
+par(cex = cex_value_clean)  # Adjust text size based on sample size
+par(mar = c(5, 4, 4, 2) + 0.1)  # Adjust margins
+plot(sampleTree_clean, main = "Sample Clustering After Removing Outliers",
+     sub = "", xlab = "", ylab = "Height",
+     cex.lab = cex_value_clean, cex.axis = cex_value_clean, cex.main = cex_value_clean,
+     cex = cex_value_clean)  # Adjust text size
+abline(h = 90, col = "red", lwd = 2)  # Add a horizontal line
+dev.off()
+
+# Cut the tree to identify clusters with a cut height of 120 for the cleaned data
+clust_clean = cutreeStatic(sampleTree_clean, cutHeight = 120, minSize = 80)
+table(clust_clean)
+
+# Identify outliers (samples assigned to cluster 0) in the cleaned data
+outliers_clean = which(clust_clean == 0)
+outlier_samples_clean = rownames(datExpr_clean)[outliers_clean]
+outlier_samples_clean
+
+# Remove columns corresponding to outlier samples from the `ex` dataframe
+ex_clean <- ex[, !colnames(ex) %in% outlier_samples]
+
+# Print the first few rows of the cleaned dataframe to verify
+head(ex_clean)
+
+# Remove "X" values from sml
+sml <- sml[sml != "X"]
+
+# Print the modified sml to verify
+print(sml)
+
+# Remove columns corresponding to outlier samples from the `gset` dataset
+gset_clean <- gset[, !colnames(gset) %in% outlier_samples]
+
+# Print the first few rows of the cleaned gset to verify
+head(gset_clean)
+
+ex <- ex_clean
+dim(ex)
+gset<-gset_clean
+
+
+save(gset, file = "/home/aiusrdata/RCode/TNBC/ro_all_meta.RData")
+load("/home/aiusrdata/RCode/TNBC/ro_all_meta.RData")
+
+
+###############################################
+
 # assign samples to groups and set up design matrix
 
 gs <- factor(sml)
@@ -3132,15 +3458,15 @@ save(tT2, file = "/home/aiusrdata/RCode/TNBC/meta_tT2_test5.RData")
 
 
 
-upregulated_all <- tT2[tT2$logFC >= 1 & tT2$adj.P.Val < 0.05, ]
-downregulated_all <- tT2[tT2$logFC <= -1 & tT2$adj.P.Val < 0.05, ]
+upregulated_all <- tT2[tT2$logFC >= 1.5 & tT2$adj.P.Val < 0.05, ]
+downregulated_all <- tT2[tT2$logFC <= -1.5 & tT2$adj.P.Val < 0.05, ]
 
 dim(upregulated_all);dim(downregulated_all)
 
-p_value_threshold <- 0.05
-tmp1_tT2 <- tT2[abs(tT2$logFC) >= 1 & tT2$adj.P.Val < p_value_threshold, ]
-upregulated_tmp1_tT2 <- tT2[tT2$logFC >= 1 & tT2$adj.P.Val < p_value_threshold, ]
-downregulated_tmp1_tT2 <- tT2[tT2$logFC <= -1 & tT2$adj.P.Val < p_value_threshold, ]
+p_value_threshold <- 0.01
+tmp1_tT2 <- tT2[abs(tT2$logFC) >= 1.5 & tT2$adj.P.Val < p_value_threshold, ]
+upregulated_tmp1_tT2 <- tT2[tT2$logFC >= 1.5 & tT2$adj.P.Val < p_value_threshold, ]
+downregulated_tmp1_tT2 <- tT2[tT2$logFC <= -1.5 & tT2$adj.P.Val < p_value_threshold, ]
 dim(tmp1_tT2 );dim(upregulated_tmp1_tT2);dim(downregulated_tmp1_tT2 )
 
 kk_temp1 <- enrichKEGG(gene         = as.character(tmp1_tT2 $Gene.ID),
@@ -3151,8 +3477,42 @@ kk_temp1 <- enrichKEGG(gene         = as.character(tmp1_tT2 $Gene.ID),
 
 head(kk_temp1@result$Description,10)
 
-hist(tT2$adj.P.Val, col = "grey", border = "white", xlab = "P-adj",
-     ylab = "Number of genes", main = "P-adj value distribution")
+#############################################
+
+hist_data <- hist(tT2$adj.P.Val, plot = FALSE)
+
+colors <- ifelse(hist_data$breaks[-length(hist_data$breaks)] <= 0.01, "green", "grey")
+
+plot(hist_data, col = colors, border = "white", xlab = "P-adj",
+     ylab = "Number of genes", main = "P-adjusted Value Distribution")
+
+legend("topright", legend = c("p-adjust <= 0.01", "p-adjust > 0.01"), 
+       fill = c("green", "grey"), title = "Legend", cex = 0.8, bty = "n")
+
+
+range_logFC <- range(tT2$logFC, na.rm = TRUE)  # Remove NA values if any
+bin_width <- 0.1  # Define the bin width
+
+breaks <- seq(from = floor(range_logFC[1] / bin_width) * bin_width,
+              to = ceiling(range_logFC[2] / bin_width) * bin_width,
+              by = bin_width)
+
+max_count <- max(hist(tT2$logFC, plot = FALSE, breaks = breaks)$counts)
+
+tT2$color <- ifelse(tT2$logFC >= 1.5, "red", ifelse(tT2$logFC <= -1.5, "blue", "grey"))
+ggplot(tT2, aes(x = logFC, fill = color)) +
+  geom_histogram(binwidth = 0.1, color = "white") +  # Adjust binwidth as needed
+  scale_fill_identity() +
+  geom_vline(xintercept = c(1.5, -1.5), color = c("red", "blue"), linetype = "dashed", linewidth = 1) +
+  scale_y_continuous(limits = c(0, max_count * 1.2)) +  # Adjust y limits to provide space for text
+  geom_text(aes(label = paste("n =", sum(logFC >= 1.5)), y = max_count * 1.1, x = 1.75), color = "red", vjust = 0, hjust = 0) +
+  geom_text(aes(label = paste("n =", sum(logFC <= -1.5)), y = max_count * 1.1, x = -1.75), color = "blue", vjust = 0, hjust = 1) +
+  labs(x = "Log Fold Change", y = "Number of Genes", title = "Log Fold Change Distribution") +
+  theme_minimal()
+
+#############################################
+
+
 
 # summarize test results as "up", "down" or "not expressed"
 dT <- decideTests(fit2, adjust.method="fdr", p.value=0.05, lfc=0)
