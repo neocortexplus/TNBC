@@ -1906,8 +1906,13 @@ dev.off()
 
 
 #####################################
-#pca and umap
+# #pca and umap and identify the outliers
 
+# Load necessary libraries
+library(ggplot2)
+library(umap)
+
+# Assuming 'allq', 'allc', 'all_expressions', 'batch', and 'group_info' are already loaded in your environment
 datasets <- list(allq = allq, allc = allc, all_expressions = all_expressions)
 titles <- list(
   allq = "After Combat and Quantile Normalization",
@@ -1933,6 +1938,13 @@ perform_analysis <- function(data, dataset_name) {
   colnames(umap_df) <- c("UMAP1", "UMAP2")
   umap_df$batch <- batch
   
+  # Identify coordinates of GSM781355
+  gsm_pca <- pca_df[row.names(pca_df) == "GSM781355", ]
+  gsm_umap <- umap_df[row.names(umap_df) == "GSM781355", ]
+  
+  # Offset for label
+  offset <- 1
+  
   # Theme for white background and publication quality
   publication_theme <- theme_minimal() +
     theme(
@@ -1948,6 +1960,9 @@ perform_analysis <- function(data, dataset_name) {
   # Plot PCA
   pca_plot <- ggplot(pca_df, aes(x = PC1, y = PC2, shape = batch, color = group_info$Group)) +
     geom_point(size = 2) +
+    geom_text(aes(x = gsm_pca$PC1 + offset, y = gsm_pca$PC2 + offset, label = "GSM781355"), color = "red", hjust = 0) +
+    geom_segment(aes(x = gsm_pca$PC1 + offset, y = gsm_pca$PC2 + offset, xend = gsm_pca$PC1, yend = gsm_pca$PC2), 
+                 arrow = arrow(length = unit(0.3, "cm")), color = "red") +
     publication_theme +
     labs(title = paste("PCA -", titles[[dataset_name]]), x = "PC1", y = "PC2") +
     scale_color_discrete(name = "Batch")
@@ -1956,6 +1971,9 @@ perform_analysis <- function(data, dataset_name) {
   # Plot UMAP
   umap_plot <- ggplot(umap_df, aes(x = UMAP1, y = UMAP2, shape = batch, color = group_info$Group)) +
     geom_point(size = 2) +
+    geom_text(aes(x = gsm_umap$UMAP1 + offset, y = gsm_umap$UMAP2 + offset, label = "GSM781355"), color = "red", hjust = 0) +
+    geom_segment(aes(x = gsm_umap$UMAP1 + offset, y = gsm_umap$UMAP2 + offset, xend = gsm_umap$UMAP1, yend = gsm_umap$UMAP2), 
+                 arrow = arrow(length = unit(0.3, "cm")), color = "red") +
     publication_theme +
     labs(title = paste("UMAP -", titles[[dataset_name]]), x = "UMAP1", y = "UMAP2") +
     scale_color_discrete(name = "Batch")
@@ -1965,6 +1983,66 @@ perform_analysis <- function(data, dataset_name) {
 for (dataset_name in names(datasets)) {
   perform_analysis(datasets[[dataset_name]], dataset_name)
 }
+
+
+# 
+# datasets <- list(allq = allq, allc = allc, all_expressions = all_expressions)
+# titles <- list(
+#   allq = "After Combat and Quantile Normalization",
+#   allc = "After Combat",
+#   all_expressions = "Before Batch Effect Removal"
+# )
+# base_path <- "/home/aiusrdata/RCode/TNBC/plots"
+# 
+# if (!dir.exists(base_path)) {
+#   dir.create(base_path, recursive = TRUE)
+# }
+# 
+# perform_analysis <- function(data, dataset_name) {
+#   # Perform PCA
+#   pca_res <- prcomp(t(data), scale. = TRUE)
+#   pca_df <- as.data.frame(pca_res$x[, 1:2])
+#   colnames(pca_df) <- c("PC1", "PC2")
+#   pca_df$batch <- batch
+#   
+#   # Perform UMAP
+#   umap_res <- umap(t(data), n_neighbors = 15, random_state = 123)
+#   umap_df <- as.data.frame(umap_res$layout)
+#   colnames(umap_df) <- c("UMAP1", "UMAP2")
+#   umap_df$batch <- batch
+#   
+#   # Theme for white background and publication quality
+#   publication_theme <- theme_minimal() +
+#     theme(
+#       plot.background = element_rect(fill = "white", color = NA),
+#       panel.background = element_rect(fill = "white", color = NA),
+#       panel.border = element_rect(color = "black", fill = NA),
+#       panel.grid.major = element_blank(),
+#       panel.grid.minor = element_blank(),
+#       legend.background = element_rect(fill = "white", color = NA),
+#       plot.title = element_text(hjust = 0.5, color = "black")
+#     )
+#   
+#   # Plot PCA
+#   pca_plot <- ggplot(pca_df, aes(x = PC1, y = PC2, shape = batch, color = group_info$Group)) +
+#     geom_point(size = 2) +
+#     publication_theme +
+#     labs(title = paste("PCA -", titles[[dataset_name]]), x = "PC1", y = "PC2") +
+#     scale_color_discrete(name = "Batch")
+#   ggsave(sprintf("%s/GPL_570_%s_PCA.png", base_path, dataset_name), plot = pca_plot, width = 10, height = 8, dpi = 300)
+#   
+#   # Plot UMAP
+#   umap_plot <- ggplot(umap_df, aes(x = UMAP1, y = UMAP2, shape = batch, color = group_info$Group)) +
+#     geom_point(size = 2) +
+#     publication_theme +
+#     labs(title = paste("UMAP -", titles[[dataset_name]]), x = "UMAP1", y = "UMAP2") +
+#     scale_color_discrete(name = "Batch")
+#   ggsave(sprintf("%s/GPL_570_%s_UMAP.png", base_path, dataset_name), plot = umap_plot, width = 10, height = 8, dpi = 300)
+# }
+# 
+# for (dataset_name in names(datasets)) {
+#   perform_analysis(datasets[[dataset_name]], dataset_name)
+# }
 
 
 #####################################
@@ -2058,17 +2136,17 @@ plot(sampleTree, main = "Sample Clustering to Detect Outliers",
      sub = "", xlab = "", ylab = "Height",
      cex.lab = cex_value, cex.axis = cex_value, cex.main = cex_value,
      cex = cex_value)  # Adjust text size
-abline(h = 90, col = "red", lwd = 2)  # Add a horizontal line
+abline(h = 150, col = "red", lwd = 2)  # Add a horizontal line
 dev.off()
 
 # Cut the tree to identify clusters with a cut height of 120
-clust = cutreeStatic(sampleTree, cutHeight = 120, minSize = 10)
+clust = cutreeStatic(sampleTree, cutHeight = 150, minSize = 10)
 table(clust)
 
 # Identify outliers (samples assigned to cluster 0)
 outliers = which(clust == 0)
 outlier_samples = rownames(datExpr)[outliers]
-
+outlier_samples
 # Replace outliers in sml with "X"
 sml[outliers] <- "X"
 
@@ -2092,11 +2170,11 @@ plot(sampleTree_clean, main = "Sample Clustering After Removing Outliers",
      sub = "", xlab = "", ylab = "Height",
      cex.lab = cex_value_clean, cex.axis = cex_value_clean, cex.main = cex_value_clean,
      cex = cex_value_clean)  # Adjust text size
-abline(h = 90, col = "red", lwd = 2)  # Add a horizontal line
+abline(h = 150, col = "red", lwd = 2)  # Add a horizontal line
 dev.off()
 
 # Cut the tree to identify clusters with a cut height of 120 for the cleaned data
-clust_clean = cutreeStatic(sampleTree_clean, cutHeight = 120, minSize = 80)
+clust_clean = cutreeStatic(sampleTree_clean, cutHeight = 150, minSize = 10)
 table(clust_clean)
 
 # Identify outliers (samples assigned to cluster 0) in the cleaned data
@@ -2496,6 +2574,16 @@ ord <- order(group_info$Dataset)
 
 colors <- c("GSE61724" = "#1B9E77", "GSE36295" = "#7570B3", "GSE37751" = "#E7298A")
 
+png(filename="/home/aiusrdata/RCode/TNBC/plots/gpl6244_boxplot_before_combat.png", width=12, height=6, units="in", res=res)
+par(mar=c(5, 6, 2, 4))  # Similar adjustment for the second plot
+par(cex.axis=0.7)
+title1 <- "GPL6244 - Before Combat"
+boxplot(all_expressions[,ord], boxwex=0.6, notch=TRUE, main=title1, outline=FALSE, las=2, col=colors[group_info$Dataset[ord]])
+legend("topright", inset=c(1.02,-0.05), legend=batch_labels, fill=colors, bty="c", cex=0.7, pt.cex=0.5, xpd=TRUE)
+dev.off()
+
+
+
 png(filename="/home/aiusrdata/RCode/TNBC/plots/gpl6244_boxplot_before_normalization.png", width=12, height=6, units="in", res=res)
 par(mar=c(5, 6, 2, 4))  # Similar adjustment for the second plot
 par(cex.axis=0.7)
@@ -2517,7 +2605,80 @@ dev.off()
 #####################################
 #pca and umap
 
-datasets <- list(allq = allq, allc = allc, all_expressions = all_expressions)
+library(ggplot2)
+library(umap)
+library(dplyr)
+
+# Assuming 'batch' and 'group_info' are pre-defined and correctly aligned with your samples
+# Make sure that 'batch' is a factor and 'group_info' is a dataframe with a 'Group' column
+
+datasets <- list(allq = allq, allc = allc)
+titles <- list(
+  allq = "After Combat and Quantile Normalization",
+  allc = "After Combat",
+  all_expressions = "Before Batch Effect Removal"
+)
+base_path <- "/home/aiusrdata/RCode/TNBC/plots"
+
+if (!dir.exists(base_path)) {
+  dir.create(base_path, recursive = TRUE)
+}
+
+perform_analysis <- function(data, dataset_name) {
+  # Perform PCA
+  pca_res <- prcomp(t(data), scale. = TRUE)
+  pca_df <- as.data.frame(pca_res$x[, 1:2])
+  colnames(pca_df) <- c("PC1", "PC2")
+  pca_df$batch <- batch
+  pca_df$sample <- colnames(data)
+  
+  # Perform UMAP
+  umap_res <- umap(t(data), n_neighbors = 15, random_state = 123)
+  umap_df <- as.data.frame(umap_res$layout)
+  colnames(umap_df) <- c("UMAP1", "UMAP2")
+  umap_df$batch <- batch
+  umap_df$sample <- colnames(data)
+  
+  # Theme for white background and publication quality
+  publication_theme <- theme_minimal() +
+    theme(
+      plot.background = element_rect(fill = "white", color = NA),
+      panel.background = element_rect(fill = "white", color = NA),
+      panel.border = element_rect(color = "black", fill = NA),
+      panel.grid.major = element_blank(),
+      panel.grid.minor = element_blank(),
+      legend.background = element_rect(fill = "white", color = NA),
+      plot.title = element_text(hjust = 0.5, color = "black")
+    )
+  
+  # Highlight specific samples
+  highlight_samples <- c("GSM1511827", "GSM927002", "GSM927015", "GSM927019", "GSM927048", "GSM927059")
+  
+  # Plot PCA
+  pca_plot <- ggplot(pca_df, aes(x = PC1, y = PC2, shape = batch, color = group_info$Group, label = sample)) +
+    geom_point(size = 2) +
+    geom_text(data = filter(pca_df, sample %in% highlight_samples), vjust = -1, color = "black", size = 3) +
+    publication_theme +
+    labs(title = paste("PCA -", titles[[dataset_name]]), x = "PC1", y = "PC2") +
+    scale_color_discrete(name = "Group")
+  ggsave(sprintf("%s/GPL_6244_%s_PCA.png", base_path, dataset_name), plot = pca_plot, width = 10, height = 8, dpi = 300)
+  
+  # Plot UMAP
+  umap_plot <- ggplot(umap_df, aes(x = UMAP1, y = UMAP2, shape = batch, color = group_info$Group, label = sample)) +
+    geom_point(size = 2) +
+    geom_text(data = filter(umap_df, sample %in% highlight_samples), vjust = -1, color = "black", size = 3) +
+    publication_theme +
+    labs(title = paste("UMAP -", titles[[dataset_name]]), x = "UMAP1", y = "UMAP2") +
+    scale_color_discrete(name = "Group")
+  ggsave(sprintf("%s/GPL_6244_%s_UMAP.png", base_path, dataset_name), plot = umap_plot, width = 10, height = 8, dpi = 300)
+}
+
+for (dataset_name in names(datasets)) {
+  perform_analysis(datasets[[dataset_name]], dataset_name)
+}
+
+
+datasets <- list(all_expressions = all_expressions)
 titles <- list(
   allq = "After Combat and Quantile Normalization",
   allc = "After Combat",
@@ -2575,7 +2736,6 @@ for (dataset_name in names(datasets)) {
   perform_analysis(datasets[[dataset_name]], dataset_name)
 }
 #####################################
-
 
 
 
@@ -2666,16 +2826,17 @@ plot(sampleTree, main = "Sample Clustering to Detect Outliers",
      sub = "", xlab = "", ylab = "Height",
      cex.lab = cex_value, cex.axis = cex_value, cex.main = cex_value,
      cex = cex_value)  # Adjust text size
-abline(h = 90, col = "red", lwd = 2)  # Add a horizontal line
+abline(h = 100, col = "red", lwd = 2)  # Add a horizontal line
 dev.off()
 
 # Cut the tree to identify clusters with a cut height of 120
-clust = cutreeStatic(sampleTree, cutHeight = 120, minSize = 10)
+clust = cutreeStatic(sampleTree, cutHeight = 100, minSize = 10)
 table(clust)
 
 # Identify outliers (samples assigned to cluster 0)
 outliers = which(clust == 0)
 outlier_samples = rownames(datExpr)[outliers]
+outlier_samples
 
 # Replace outliers in sml with "X"
 sml[outliers] <- "X"
@@ -2700,11 +2861,11 @@ plot(sampleTree_clean, main = "Sample Clustering After Removing Outliers",
      sub = "", xlab = "", ylab = "Height",
      cex.lab = cex_value_clean, cex.axis = cex_value_clean, cex.main = cex_value_clean,
      cex = cex_value_clean)  # Adjust text size
-abline(h = 90, col = "red", lwd = 2)  # Add a horizontal line
+abline(h = 100, col = "red", lwd = 2)  # Add a horizontal line
 dev.off()
 
 # Cut the tree to identify clusters with a cut height of 120 for the cleaned data
-clust_clean = cutreeStatic(sampleTree_clean, cutHeight = 120, minSize = 80)
+clust_clean = cutreeStatic(sampleTree_clean, cutHeight = 100, minSize = 10)
 table(clust_clean)
 
 # Identify outliers (samples assigned to cluster 0) in the cleaned data
@@ -3420,7 +3581,28 @@ groups <- make.names(c("TNBC","normal"))
 levels(gs) <- groups
 gset$group <- gs
 
+################################################################################
 
+#export dataset as csv file for ML 
+
+# Transpose the ex dataframe
+csv_file <- t(ex)
+
+# Ensure the length of sml matches the number of rows in csv_file
+if (length(sml) == nrow(csv_file)) {
+  # Add sml as a new column to csv_file
+  csv_file <- as.data.frame(csv_file)
+  csv_file$Label <- sml
+  
+  # Save the csv_file dataframe as a CSV file
+  write.csv(csv_file, "/home/aiusrdata/git_projects/bioinformatics/cleaned_data_with_labels.csv", row.names = TRUE)
+} else {
+  stop("The length of sml does not match the number of rows in csv_file.")
+}
+
+# Print the first few rows of the modified csv_file to verify
+head(csv_file)
+################################################################################
 
 design <- model.matrix(~group + 0, gset)
 colnames(design) <- levels(gs)
@@ -3515,7 +3697,7 @@ ggplot(tT2, aes(x = logFC, fill = color)) +
 
 
 # summarize test results as "up", "down" or "not expressed"
-dT <- decideTests(fit2, adjust.method="fdr", p.value=0.05, lfc=0)
+dT <- decideTests(fit2, adjust.method="fdr", p.value=0.01, lfc=1.5)
 
 # Venn diagram of results
 vennDiagram(dT, circle.col=palette())

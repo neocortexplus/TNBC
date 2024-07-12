@@ -120,6 +120,111 @@ new_gset <- ExpressionSet(
 gset <- new_gset
 
 
+###############################################
+#Find and Remove Outlier 
+
+datExpr <- t(ex)
+dim(datExpr)
+
+sampleTree = hclust(dist(datExpr), method = "average");
+
+# Load required packages
+library(WGCNA)
+
+# Define a function to adjust cex based on the number of samples
+adjust_cex <- function(n_samples) {
+  if (n_samples > 500) {
+    return(0.3)
+  } else if (n_samples > 100) {
+    return(0.5)
+  } else {
+    return(0.7)
+  }
+}
+
+# Assuming datExpr, sampleTree, and gset are already defined
+
+# Calculate appropriate cex for the given number of samples
+cex_value <- adjust_cex(nrow(datExpr))
+
+# Plot the initial dendrogram and save as PDF
+pdf("/home/aiusrdata/git_projects/bioinformatics/GSE38959_initial_sample_outliers_tree.pdf", width = 8, height = 6)
+par(cex = cex_value)  # Adjust text size based on sample size
+par(mar = c(5, 4, 4, 2) + 0.1)  # Adjust margins
+plot(sampleTree, main = "Sample Clustering to Detect Outliers",
+     sub = "", xlab = "", ylab = "Height",
+     cex.lab = cex_value, cex.axis = cex_value, cex.main = cex_value,
+     cex = cex_value)  # Adjust text size
+abline(h = 100, col = "red", lwd = 2)  # Add a horizontal line
+dev.off()
+
+# Cut the tree to identify clusters with a cut height of 120
+clust = cutreeStatic(sampleTree, cutHeight = 100, minSize = 10)
+table(clust)
+
+# Identify outliers (samples assigned to cluster 0)
+outliers = which(clust == 0)
+outlier_samples = rownames(datExpr)[outliers]
+outlier_samples
+
+# Replace outliers in sml with "X"
+sml[outliers] <- "X"
+
+# Print the modified sml to verify
+print(sml)
+
+# Remove outliers from the dataset
+datExpr_clean = datExpr[-outliers, ]
+
+# Re-cluster the samples without outliers
+sampleTree_clean = hclust(dist(datExpr_clean), method = "average")
+
+# Calculate appropriate cex for the cleaned dataset
+cex_value_clean <- adjust_cex(nrow(datExpr_clean))
+
+# Plot the cleaned dendrogram and save as PDF
+pdf("/home/aiusrdata/git_projects/bioinformatics/GPL6244_cleaned_sample_outliers_tree.pdf", width = 8, height = 6)
+par(cex = cex_value_clean)  # Adjust text size based on sample size
+par(mar = c(5, 4, 4, 2) + 0.1)  # Adjust margins
+plot(sampleTree_clean, main = "Sample Clustering After Removing Outliers",
+     sub = "", xlab = "", ylab = "Height",
+     cex.lab = cex_value_clean, cex.axis = cex_value_clean, cex.main = cex_value_clean,
+     cex = cex_value_clean)  # Adjust text size
+abline(h = 100, col = "red", lwd = 2)  # Add a horizontal line
+dev.off()
+
+# Cut the tree to identify clusters with a cut height of 120 for the cleaned data
+clust_clean = cutreeStatic(sampleTree_clean, cutHeight = 100, minSize = 10)
+table(clust_clean)
+
+# Identify outliers (samples assigned to cluster 0) in the cleaned data
+outliers_clean = which(clust_clean == 0)
+outlier_samples_clean = rownames(datExpr_clean)[outliers_clean]
+outlier_samples_clean
+
+# Remove columns corresponding to outlier samples from the `ex` dataframe
+ex_clean <- ex[, !colnames(ex) %in% outlier_samples]
+
+# Print the first few rows of the cleaned dataframe to verify
+head(ex_clean)
+
+# Remove "X" values from sml
+sml <- sml[sml != "X"]
+
+# Print the modified sml to verify
+print(sml)
+
+# Remove columns corresponding to outlier samples from the `gset` dataset
+gset_clean <- gset[, !colnames(gset) %in% outlier_samples]
+
+# Print the first few rows of the cleaned gset to verify
+head(gset_clean)
+
+ex <- ex_clean
+dim(ex)
+gset<-gset_clean
+###############################################
+
 
 
 
@@ -171,6 +276,28 @@ save(tT2, file = "/home/aiusrdata/RCode/TNBC/results/GSE38959_tT2.RData")
 
 hist(tT2$adj.P.Val, col = "grey", border = "white", xlab = "P-adj",
      ylab = "Number of genes", main = "P-adj value distribution")
+
+
+upregulated_all <- tT2[tT2$logFC >= 1.5 & tT2$adj.P.Val <= 0.01, ]
+downregulated_all <- tT2[tT2$logFC <= -1.5 & tT2$adj.P.Val <= 0.01, ]
+
+dim(upregulated_all);dim(downregulated_all)
+
+p_value_threshold <- 0.01
+tmp1_tT2 <- tT2[abs(tT2$logFC) >= 1.5 & tT2$adj.P.Val < p_value_threshold, ]
+upregulated_tmp1_tT2 <- tT2[tT2$logFC >= 1.5 & tT2$adj.P.Val < p_value_threshold, ]
+downregulated_tmp1_tT2 <- tT2[tT2$logFC <= -1.5 & tT2$adj.P.Val < p_value_threshold, ]
+dim(tmp1_tT2 );dim(upregulated_tmp1_tT2);dim(downregulated_tmp1_tT2 )
+
+kk_temp1 <- enrichKEGG(gene         = as.character(tmp1_tT2 $Gene.ID),
+                       organism     = 'hsa',
+                       pvalueCutoff = 0.05)
+
+
+
+head(kk_temp1@result$Description,10)
+
+
 
 # summarize test results as "up", "down" or "not expressed"
 dT <- decideTests(fit2, adjust.method="fdr", p.value=0.05, lfc=0)
